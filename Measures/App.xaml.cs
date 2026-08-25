@@ -1,5 +1,6 @@
 using System;
 using Microsoft.Extensions.Logging;
+using Measures.Theming;
 using Uno.Resizetizer;
 
 namespace Measures;
@@ -43,8 +44,13 @@ public partial class App : Application
             // When the navigation stack isn't restored navigate to the first page,
             // configuring the new page by passing required information as a navigation
             // parameter
-            rootFrame.Navigate(typeof(MainPage), args.Arguments);
+            rootFrame.Navigate(typeof(MeasuresPage), args.Arguments);
         }
+
+        // Custom token keys resolve unreliably inside ThemeDictionaries, so the
+        // scheme is applied by re-colouring the shared brush instances instead.
+        Palette.Apply(rootFrame.ActualTheme);
+        rootFrame.ActualThemeChanged += (sender, _) => Palette.Apply(sender.ActualTheme);
 
         MainWindow.SetWindowIcon();
         // Ensure the current window is active

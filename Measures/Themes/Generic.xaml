@@ -1,0 +1,215 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Measures.Controls"
+    xmlns:charts="using:Measures.Charts">
+
+
+
+    <!-- ══ SpacedText ══ -->
+
+    <Style x:Key="SpacedTextBase" TargetType="controls:SpacedText">
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="VerticalAlignment" Value="Bottom" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="controls:SpacedText">
+                    <StackPanel x:Name="PART_Host" Orientation="Horizontal" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="controls:SpacedText" BasedOn="{StaticResource SpacedTextBase}" />
+
+    <!-- ══ type roles ══ -->
+
+    <Style x:Key="LabelStyle" TargetType="controls:SpacedText" BasedOn="{StaticResource SpacedTextBase}">
+        <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
+        <Setter Property="FontSize" Value="{StaticResource LabelSize}" />
+        <Setter Property="Foreground" Value="{StaticResource QuietBrush}" />
+        <Setter Property="Tracking" Value="0.18" />
+        <Setter Property="IsUpperCase" Value="True" />
+    </Style>
+
+    <Style x:Key="AxisStyle" TargetType="controls:SpacedText" BasedOn="{StaticResource SpacedTextBase}">
+        <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
+        <Setter Property="FontSize" Value="{StaticResource AxisSize}" />
+        <Setter Property="Foreground" Value="{StaticResource QuietBrush}" />
+        <Setter Property="Tracking" Value="0.12" />
+    </Style>
+
+    <!-- ══ SpacedText ══ -->
+
+
+
+    <!-- ══ CaptionPresenter ══ -->
+
+    <Style TargetType="controls:CaptionPresenter">
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="controls:CaptionPresenter">
+                    <!-- the reading never wraps and never resizes the card -->
+                    <TextBlock
+                        x:Name="PART_Text"
+                        FontFamily="{StaticResource SerifItalicFont}"
+                        FontSize="{StaticResource CaptionSize}"
+                        FontStyle="Italic"
+                        TextWrapping="NoWrap"
+                        TextTrimming="CharacterEllipsis" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ══ DotButton ══ -->
+
+    <Style TargetType="controls:DotButton">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="IsTabStop" Value="True" />
+        <Setter Property="UseSystemFocusVisuals" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="controls:DotButton">
+                    <Grid
+                        Width="{TemplateBinding HitSize}"
+                        Height="{TemplateBinding HitSize}"
+                        Background="Transparent">
+                        <!-- 2 epx indigo ring, 3 epx clear of the mark -->
+                        <Ellipse
+                            x:Name="PART_Focus"
+                            Width="{TemplateBinding FocusSize}"
+                            Height="{TemplateBinding FocusSize}"
+                            Opacity="0"
+                            Stroke="{StaticResource AiBrush}"
+                            StrokeThickness="2" />
+                        <Ellipse
+                            x:Name="PART_Mark"
+                            Width="{TemplateBinding BaseSize}"
+                            Height="{TemplateBinding BaseSize}" />
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ══ charts ══ -->
+
+    <Style x:Key="ChartHostStyle" TargetType="Control">
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+
+    <Style TargetType="charts:RidgeChart" BasedOn="{StaticResource ChartHostStyle}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="charts:RidgeChart">
+                    <Canvas x:Name="PART_Plot" Height="{TemplateBinding PlotHeight}">
+                        <Path x:Name="PART_Fill" Fill="{StaticResource RidgeMistBrush}" />
+                        <Path
+                            x:Name="PART_Line"
+                            Stroke="{StaticResource InkBrush}"
+                            StrokeEndLineCap="Round"
+                            StrokeLineJoin="Round"
+                            StrokeStartLineCap="Round"
+                            StrokeThickness="1.5" />
+                        <Line
+                            x:Name="PART_Pin"
+                            Opacity="0"
+                            Stroke="{StaticResource AiSoft50Brush}"
+                            StrokeThickness="1" />
+                    </Canvas>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ══ MeasureCard ══ -->
+
+    <Style TargetType="controls:MeasureCard">
+        <Setter Property="MinHeight" Value="300" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="VerticalContentAlignment" Value="Bottom" />
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="controls:MeasureCard">
+                    <Grid x:Name="PART_Rise">
+                        <Border
+                            Background="{StaticResource CardBrush}"
+                            BorderBrush="{StaticResource HairlineBrush}"
+                            BorderThickness="1"
+                            CornerRadius="24">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <!-- head -->
+                                <Grid Padding="28,28,28,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <controls:SpacedText
+                                        Style="{StaticResource LabelStyle}"
+                                        Text="{TemplateBinding HeadLeft}" />
+                                    <controls:SpacedText
+                                        Grid.Column="1"
+                                        Style="{StaticResource LabelStyle}"
+                                        Text="{TemplateBinding HeadRight}" />
+                                </Grid>
+
+                                <!-- body: numeral pinned top, chart pinned bottom -->
+                                <Grid Grid.Row="1" Padding="28,0,28,0">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock
+                                        x:Name="PART_Numeral"
+                                        FontFamily="{StaticResource SerifFont}"
+                                        FontSize="{StaticResource NumeralSize}"
+                                        Foreground="{StaticResource InkBrush}"
+                                        LineHeight="{StaticResource NumeralSize}"
+                                        LineStackingStrategy="BlockLineHeight"
+                                        TextWrapping="NoWrap" />
+
+                                    <StackPanel
+                                        Grid.Row="1"
+                                        Margin="0,22,0,0"
+                                        VerticalAlignment="Bottom">
+                                        <ContentPresenter
+                                            Content="{TemplateBinding Content}"
+                                            ContentTemplate="{TemplateBinding ContentTemplate}"
+                                            HorizontalAlignment="Stretch" />
+                                        <Grid x:Name="PART_Axis" Margin="0,8,0,0" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- foot -->
+                                <Grid Grid.Row="2" Padding="28" ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <controls:CaptionPresenter x:Name="PART_Caption" />
+                                    <controls:SpacedText
+                                        Grid.Column="1"
+                                        Style="{StaticResource LabelStyle}"
+                                        Text="{TemplateBinding FootRight}" />
+                                </Grid>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</ResourceDictionary>
