@@ -32,8 +32,8 @@ Three platform gaps were found and worked around, each with the fix commented at
   (not the card rise); beads were photographed raining in from above the card and stacking.
 - **Not verified:** dark scheme (paused by request), reduced motion, anything on an Android
   device or emulator.
-- **Git:** `main`, last commit `b585938 feat: sessions as session beads, and a replay button`.
-  Clean except this file.
+- **Git:** `main`, last commit `3f8a732 fix: beads fall from the sky, and animations stop being collected mid-flight`.
+  Clean.
 
 ## Next actions (in order)
 
