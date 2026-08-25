@@ -248,7 +248,7 @@ public sealed partial class RidgeChart : ChartBase
     {
         if (_selected is { } index)
         {
-            Publish(Reading.Live_(ReadingFor(index)));
+            Publish(Reading.Committed(ReadingFor(index)));
         }
         else
         {

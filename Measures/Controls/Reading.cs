@@ -8,7 +8,7 @@ public readonly record struct Reading(string Text, bool Live, bool Immediate = f
 {
     public static Reading Preview(string text) => new(text, Live: true, Immediate: true);
 
-    public static Reading Live_(string text) => new(text, Live: true);
+    public static Reading Committed(string text) => new(text, Live: true);
 
     public static Reading Default(string text) => new(text, Live: false);
 }

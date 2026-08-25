@@ -51,7 +51,7 @@ public abstract partial class ChartBase : Control, ICaptionSource
 
         Plot = GetTemplateChild("PART_Plot") as Canvas;
 
-        if (Plot is not null && ActualWidth > 0)
+        if (ActualWidth > 0)
         {
             Layout(ActualWidth);
         }
@@ -113,11 +113,6 @@ public abstract partial class ChartBase : Control, ICaptionSource
     void Layout(double width)
     {
         _lastWidth = width;
-
-        if (Plot is null)
-        {
-            return;
-        }
 
         Rebuild(width, PlotHeight);
 

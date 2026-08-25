@@ -41,7 +41,8 @@ public sealed partial class DotButton : ButtonBase
     {
         DefaultStyleKey = typeof(DotButton);
 
-        GotFocus += (_, _) => ShowFocus(true);
+        // :focus-visible, not :focus - a pointer press leaves no ring
+        GotFocus += (_, _) => ShowFocus(FocusState == FocusState.Keyboard);
         LostFocus += (_, _) => ShowFocus(false);
         Unloaded += (_, _) =>
         {

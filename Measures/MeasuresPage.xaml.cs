@@ -29,6 +29,7 @@ public sealed partial class MeasuresPage : Page
         RidgeCard.NumeralSuffix = " h this week";
 
         var sessions = SampleData.Sessions;
+        Rain.ChartData = sessions;
         RainCard.NumeralValue = sessions.Total.ToString(CultureInfo.InvariantCulture);
         RainCard.NumeralSuffix = sessions.Total == 1 ? " session" : " sessions";
         RainCard.AxisLabels = $"{Format.DayLabel(sessions.Days[0].Date)}, today";

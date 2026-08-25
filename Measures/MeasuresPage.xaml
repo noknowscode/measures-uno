@@ -114,7 +114,9 @@
                         FootRight="focus"
                         HeadLeft="Sessions"
                         HeadRight="14 days"
-                        RiseDelay="120" />
+                        RiseDelay="120">
+                        <charts:RainChart x:Name="Rain" />
+                    </controls:MeasureCard>
 
                     <controls:MeasureCard
                         x:Name="NightCard"

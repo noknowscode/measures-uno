@@ -95,6 +95,69 @@
         </Setter>
     </Style>
 
+    <!-- ══ StemButton ══ -->
+
+    <Style TargetType="controls:StemButton">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="IsTabStop" Value="True" />
+        <Setter Property="UseSystemFocusVisuals" Value="False" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="controls:StemButton">
+                    <Grid Background="Transparent">
+                        <Rectangle
+                            x:Name="PART_Focus"
+                            Margin="-3"
+                            Opacity="0"
+                            RadiusX="8"
+                            RadiusY="8"
+                            Stroke="{StaticResource AiBrush}"
+                            StrokeThickness="2" />
+                        <!-- the stem, and everything that happens to it, ride together -->
+                        <Grid
+                            x:Name="PART_Stem"
+                            Width="1.5"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Bottom">
+                            <Border x:Name="PART_Body" CornerRadius="1" VerticalAlignment="Bottom" />
+                            <Border
+                                x:Name="PART_Pour"
+                                VerticalAlignment="Bottom"
+                                Background="{StaticResource StemPourBrush}"
+                                CornerRadius="1" />
+                            <Ellipse
+                                x:Name="PART_Splash"
+                                Width="4"
+                                Height="1.5"
+                                Margin="0,0,0,-1"
+                                VerticalAlignment="Bottom"
+                                Fill="{StaticResource AiBrush}"
+                                Opacity="0" />
+                            <Ellipse
+                                x:Name="PART_Drop"
+                                Width="3.5"
+                                Height="3.5"
+                                Margin="0,-3,0,0"
+                                VerticalAlignment="Top"
+                                Fill="{StaticResource AiBrush}"
+                                Opacity="0" />
+                            <Ellipse
+                                x:Name="PART_Bead"
+                                Width="4.5"
+                                Height="4.5"
+                                Margin="0,-3,0,0"
+                                VerticalAlignment="Top"
+                                Fill="{StaticResource AiBrush}"
+                                Visibility="Collapsed" />
+                        </Grid>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- ══ charts ══ -->
 
     <Style x:Key="ChartHostStyle" TargetType="Control">
@@ -121,6 +184,16 @@
                             Stroke="{StaticResource AiSoft50Brush}"
                             StrokeThickness="1" />
                     </Canvas>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="charts:RainChart" BasedOn="{StaticResource ChartHostStyle}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="charts:RainChart">
+                    <Grid x:Name="PART_Row" Height="{TemplateBinding PlotHeight}" />
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
