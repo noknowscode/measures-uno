@@ -82,76 +82,126 @@
                             x:Name="PART_Focus"
                             Width="{TemplateBinding FocusSize}"
                             Height="{TemplateBinding FocusSize}"
+                            IsHitTestVisible="False"
                             Opacity="0"
                             Stroke="{StaticResource AiBrush}"
                             StrokeThickness="2" />
                         <Ellipse
                             x:Name="PART_Mark"
                             Width="{TemplateBinding BaseSize}"
-                            Height="{TemplateBinding BaseSize}" />
+                            Height="{TemplateBinding BaseSize}"
+                            IsHitTestVisible="False" />
                     </Grid>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
     </Style>
 
-    <!-- ══ StemButton ══ -->
+    <!-- ══ BeadColumn ══ -->
 
-    <Style TargetType="controls:StemButton">
+    <Style TargetType="controls:BeadColumn">
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="IsTabStop" Value="True" />
         <Setter Property="UseSystemFocusVisuals" Value="False" />
-        <Setter Property="HorizontalAlignment" Value="Stretch" />
-        <Setter Property="VerticalAlignment" Value="Stretch" />
         <Setter Property="Template">
             <Setter.Value>
-                <ControlTemplate TargetType="controls:StemButton">
+                <ControlTemplate TargetType="controls:BeadColumn">
                     <Grid Background="Transparent">
                         <Rectangle
                             x:Name="PART_Focus"
                             Margin="-3"
+                            IsHitTestVisible="False"
                             Opacity="0"
                             RadiusX="8"
                             RadiusY="8"
                             Stroke="{StaticResource AiBrush}"
                             StrokeThickness="2" />
-                        <!-- the stem, and everything that happens to it, ride together -->
-                        <Grid
-                            x:Name="PART_Stem"
-                            Width="1.5"
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Bottom">
-                            <Border x:Name="PART_Body" CornerRadius="1" VerticalAlignment="Bottom" />
-                            <Border
-                                x:Name="PART_Pour"
-                                VerticalAlignment="Bottom"
-                                Background="{StaticResource StemPourBrush}"
-                                CornerRadius="1" />
+                        <!-- the beads are built in code; the ring spreads from where the top one lands -->
+                        <Canvas x:Name="PART_Beads" IsHitTestVisible="False" />
+                        <Canvas IsHitTestVisible="False">
                             <Ellipse
-                                x:Name="PART_Splash"
-                                Width="4"
-                                Height="1.5"
-                                Margin="0,0,0,-1"
-                                VerticalAlignment="Bottom"
-                                Fill="{StaticResource AiBrush}"
-                                Opacity="0" />
-                            <Ellipse
-                                x:Name="PART_Drop"
-                                Width="3.5"
-                                Height="3.5"
-                                Margin="0,-3,0,0"
-                                VerticalAlignment="Top"
-                                Fill="{StaticResource AiBrush}"
-                                Opacity="0" />
-                            <Ellipse
-                                x:Name="PART_Bead"
+                                x:Name="PART_Plip"
                                 Width="4.5"
                                 Height="4.5"
-                                Margin="0,-3,0,0"
-                                VerticalAlignment="Top"
-                                Fill="{StaticResource AiBrush}"
-                                Visibility="Collapsed" />
-                        </Grid>
+                                Opacity="0"
+                                Stroke="{StaticResource AiBrush}"
+                                StrokeThickness="1" />
+                        </Canvas>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ══ quiet button ══ -->
+
+    <!--
+      Opaque, so it never reads as a floating glyph on the mist, and hairline,
+      so it stays furniture: the instruments are the only bold thing here.
+    -->
+    <Style x:Key="QuietButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="{StaticResource CardBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource HairlineBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="14,7" />
+        <Setter Property="UseSystemFocusVisuals" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid x:Name="Root" Background="Transparent">
+                        <Border
+                            x:Name="Chrome"
+                            Padding="{TemplateBinding Padding}"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="999"
+                            RenderTransformOrigin="0.5,0.5">
+                            <Border.RenderTransform>
+                                <ScaleTransform x:Name="Press" />
+                            </Border.RenderTransform>
+                            <ContentPresenter
+                                x:Name="Label"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center" />
+                        </Border>
+                        <Border
+                            x:Name="FocusRing"
+                            Margin="-3"
+                            BorderBrush="{StaticResource AiBrush}"
+                            BorderThickness="2"
+                            CornerRadius="999"
+                            IsHitTestVisible="False"
+                            Opacity="0" />
+
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal" />
+                                <VisualState x:Name="PointerOver">
+                                    <VisualState.Setters>
+                                        <Setter Target="Chrome.BorderBrush" Value="{StaticResource AiSoft40Brush}" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <VisualState.Setters>
+                                        <Setter Target="Chrome.BorderBrush" Value="{StaticResource AiSoft40Brush}" />
+                                        <!-- 0.98 is the house press for XAML; 0.96 is the web value -->
+                                        <Setter Target="Press.ScaleX" Value="0.98" />
+                                        <Setter Target="Press.ScaleY" Value="0.98" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Disabled" />
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="FocusStates">
+                                <VisualState x:Name="Unfocused" />
+                                <VisualState x:Name="PointerFocused" />
+                                <VisualState x:Name="Focused">
+                                    <VisualState.Setters>
+                                        <Setter Target="FocusRing.Opacity" Value="1" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
                     </Grid>
                 </ControlTemplate>
             </Setter.Value>
@@ -193,7 +243,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="charts:RainChart">
-                    <Grid x:Name="PART_Row" Height="{TemplateBinding PlotHeight}" />
+                    <Canvas x:Name="PART_Plot" Height="{TemplateBinding PlotHeight}" />
                 </ControlTemplate>
             </Setter.Value>
         </Setter>

@@ -19,6 +19,20 @@ public sealed partial class MeasuresPage : Page
         // on activation focus lands on the first chart mark, and the scroll
         // viewer brings it into view - the page would open part way down
         Loaded += (_, _) => Scroll.ChangeView(null, 0, null, disableAnimation: true);
+
+    }
+
+    /// <summary>
+    /// Plays the page cold again: every card rises, every instrument draws
+    /// itself in. The entrance is the loading state, so this is also the only
+    /// way to see it without relaunching.
+    /// </summary>
+    void OnReplay(object sender, RoutedEventArgs e)
+    {
+        foreach (var card in new[] { RidgeCard, RainCard, NightCard, RoadCard })
+        {
+            card.Replay();
+        }
     }
 
     void Bind()

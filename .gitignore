@@ -489,4 +489,4 @@ $RECYCLE.BIN/
 # Single Target Config
 solution-config.props
 # Publish Profiles
-!**/Properties/PublishProfiles/*.pubxml
+!**/Properties/PublishProfiles/*.pubxmltools/shots/

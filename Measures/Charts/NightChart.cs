@@ -2,6 +2,7 @@ using Measures.Controls;
 using Measures.Data;
 using Measures.Motion;
 using Microsoft.UI.Xaml.Automation;
+using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
 using Path = Microsoft.UI.Xaml.Shapes.Path;
@@ -53,15 +54,22 @@ public sealed partial class NightChart : ChartBase
         DefaultStyleKey = typeof(NightChart);
         PlotHeight = 80;
 
-        // System keeps the vertical scroller alive; TranslateX is ours to take
-        ManipulationMode = ManipulationModes.System | ManipulationModes.TranslateX;
+        // ManipulationMode is deliberately left alone. Making this a manipulation
+        // target hands the pointer to the gesture processor, which takes the
+        // capture straight back off us and ends the scrub on the first move.
+        // Not capturing until horizontal intent is proven is what keeps a
+        // vertical swipe with the ScrollViewer, and it needs no manipulation.
 
-        PointerPressed += OnPointerPressed;
-        PointerMoved += OnPointerMoved;
-        PointerReleased += OnPointerReleased;
-        PointerCanceled += OnPointerReleased;
-        PointerCaptureLost += OnPointerReleased;
-        PointerExited += OnPointerExited;
+        // Setting ManipulationMode makes this element a manipulation target, and
+        // the gesture machinery marks the pointer events handled before they
+        // reach an ordinary subscription. handledEventsToo is the only way to
+        // see them - a plain += here is silently never called.
+        AddHandler(PointerPressedEvent, new PointerEventHandler(OnPointerPressed), true);
+        AddHandler(PointerMovedEvent, new PointerEventHandler(OnPointerMoved), true);
+        AddHandler(PointerReleasedEvent, new PointerEventHandler(OnPointerReleased), true);
+        AddHandler(PointerCanceledEvent, new PointerEventHandler(OnPointerReleased), true);
+        AddHandler(PointerCaptureLostEvent, new PointerEventHandler(OnPointerReleased), true);
+        AddHandler(PointerExitedEvent, new PointerEventHandler(OnPointerExited), true);
         KeyDown += OnKeyDown;
         LostFocus += (_, _) => EndScrub();
 
@@ -231,6 +239,7 @@ public sealed partial class NightChart : ChartBase
 
     void OnPointerPressed(object sender, PointerRoutedEventArgs e)
     {
+
         if (_sampler is null)
         {
             return;
@@ -297,13 +306,14 @@ public sealed partial class NightChart : ChartBase
 
     void OnPointerExited(object sender, PointerRoutedEventArgs e)
     {
-        if (!_scrubbing && !_awaitingIntent)
+        // an active scrub owns the pointer; only a release or a lost capture
+        // ends it, or dragging past the edge of the card would cut it short
+        if (_scrubbing)
         {
             return;
         }
 
         _awaitingIntent = false;
-        EndScrub();
     }
 
     void OnKeyDown(object sender, KeyRoutedEventArgs e)
@@ -338,7 +348,6 @@ public sealed partial class NightChart : ChartBase
         var from = _keyX ?? width / 2;
 
         _keyX = Math.Clamp(from + step * width, EdgeInset, width - EdgeInset);
-        _scrubbing = true;
         ScrubTo(_keyX.Value);
     }
 
@@ -355,7 +364,6 @@ public sealed partial class NightChart : ChartBase
         {
             return;
         }
-
         MarkInvited();
 
         var width = PlotWidth;
@@ -395,6 +403,12 @@ public sealed partial class NightChart : ChartBase
 
     void EndScrub()
     {
+
+        if (!_scrubbing && _keyX is null)
+        {
+            return;
+        }
+
         _scrubbing = false;
         _keyX = null;
 

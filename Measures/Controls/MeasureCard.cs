@@ -214,6 +214,21 @@ public sealed partial class MeasureCard : ContentControl
         Anim.Animate(_rise, "Y", 14, 0, 900, Anim.Hands, RiseDelay);
     }
 
+    /// <summary>Rises again, and asks its instrument to do the same.</summary>
+    public void Replay()
+    {
+        if (_riseHost is not null && Anim.Enabled)
+        {
+            _riseHost.Opacity = 0;
+            _rise.Y = 14;
+
+            Anim.Animate(_riseHost, "Opacity", 0, 1, 900, Anim.Hands, RiseDelay);
+            Anim.Animate(_rise, "Y", 14, 0, 900, Anim.Hands, RiseDelay);
+        }
+
+        _source?.Replay();
+    }
+
     void OnUnloaded(object sender, RoutedEventArgs e)
     {
         if (_source is not null)

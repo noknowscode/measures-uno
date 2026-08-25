@@ -69,11 +69,24 @@
                         FontStyle="Italic"
                         Foreground="{StaticResource InkBrush}"
                         Text="measures" />
-                    <controls:SpacedText
+                    <StackPanel
                         Grid.Column="1"
                         VerticalAlignment="Bottom"
-                        Style="{StaticResource LabelStyle}"
-                        Text="Without thought" />
+                        Orientation="Horizontal"
+                        Spacing="16">
+                        <controls:SpacedText
+                            VerticalAlignment="Bottom"
+                            Style="{StaticResource LabelStyle}"
+                            Text="Without thought" />
+                        <!-- replays every entrance, for showing the page cold -->
+                        <Button
+                            x:Name="ReplayButton"
+                            AutomationProperties.Name="Replay the entrance"
+                            Click="OnReplay"
+                            Style="{StaticResource QuietButtonStyle}">
+                            <controls:SpacedText Style="{StaticResource LabelStyle}" Text="Replay" />
+                        </Button>
+                    </StackPanel>
                 </Grid>
 
                 <!-- ══ the bench ══ -->

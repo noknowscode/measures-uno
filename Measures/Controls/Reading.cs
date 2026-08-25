@@ -23,4 +23,7 @@ public interface ICaptionSource
 
     /// <summary>Speaks the opening line once the chart is laid out.</summary>
     void PublishInitialReading();
+
+    /// <summary>Rebuilds to a clean state and plays the entrance again.</summary>
+    void Replay();
 }

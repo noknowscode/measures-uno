@@ -182,7 +182,12 @@ public static class Anim
     /// implemented on Uno, so an eased curve here would be silently dropped.
     /// Over the 300-400 ms these transitions run, the two are indistinguishable.
     /// </summary>
-    public static Storyboard AnimateColor(DependencyObject target, string property, Color to, double ms)
+    public static Storyboard AnimateColor(
+        DependencyObject target,
+        string property,
+        Color to,
+        double ms,
+        double delayMs = 0)
     {
         var animation = new ColorAnimationUsingKeyFrames
         {
@@ -196,6 +201,7 @@ public static class Anim
             return Run(target, property, animation, null);
         }
 
+        animation.BeginTime = TimeSpan.FromMilliseconds(delayMs);
         animation.KeyFrames.Add(new LinearColorKeyFrame
         {
             KeyTime = TimeSpan.FromMilliseconds(ms),

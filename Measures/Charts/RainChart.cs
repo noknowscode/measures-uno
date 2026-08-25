@@ -1,28 +1,28 @@
 using Measures.Controls;
 using Measures.Data;
 using Microsoft.UI.Xaml.Automation;
-using Microsoft.UI.Xaml.Controls;
 
 namespace Measures.Charts;
 
 /// <summary>
-/// A fortnight of focus as rainfall. The gesture is <em>droplet</em>: tap a day
-/// and its drop detaches and falls the stem's own height, which is what turns a
-/// bar chart into weather.
+/// A fortnight of focus as beads in a pool. A session is a discrete countable
+/// thing, so the count is the chart: one bead per session, readable without
+/// ever consulting the axis. The gesture is <em>plip</em> - tap a day and its
+/// top bead hops and lands, a drop disturbing the pool.
 /// </summary>
 public sealed partial class RainChart : ChartBase
 {
-    /// <summary>Flex gap between stems, as a fraction of the row width.</summary>
+    /// <summary>Flex gap between columns, as a fraction of the row width.</summary>
     const double GapFraction = 0.045;
 
-    const double MinStemFraction = 0.03;
+    /// <summary>Each day rains in 50 ms behind the last.</summary>
+    const double DayStaggerMs = 50;
 
     public static readonly DependencyProperty ChartDataProperty = DependencyProperty.Register(
         nameof(ChartData), typeof(SessionLog), typeof(RainChart), new PropertyMetadata(null, OnDataChanged));
 
-    readonly List<StemButton> _stems = [];
+    readonly List<BeadColumn> _columns = [];
 
-    Grid? _row;
     int? _selected;
 
     public RainChart()
@@ -35,13 +35,6 @@ public sealed partial class RainChart : ChartBase
     {
         get => (SessionLog?)GetValue(ChartDataProperty);
         set => SetValue(ChartDataProperty, value);
-    }
-
-    protected override void OnApplyTemplate()
-    {
-        _row = GetTemplateChild("PART_Row") as Grid;
-
-        base.OnApplyTemplate();
     }
 
     static void OnDataChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -57,12 +50,12 @@ public sealed partial class RainChart : ChartBase
 
     protected override void Rebuild(double width, double height)
     {
-        if (_row is null)
+        if (Plot is null)
         {
             return;
         }
 
-        ClearStems();
+        ClearColumns();
 
         var data = ChartData;
 
@@ -72,32 +65,36 @@ public sealed partial class RainChart : ChartBase
         }
 
         var days = data.Days;
-        var ceiling = Math.Max(data.Max, 1);
 
-        _row.ColumnSpacing = width * GapFraction;
-        _row.Height = height;
+        // the flex row the prototype uses, resolved by hand
+        var gap = width * GapFraction;
+        var cell = Math.Max((width - gap * (days.Count - 1)) / days.Count, 1);
 
         for (var i = 0; i < days.Count; i++)
         {
-            _row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-
-            var stem = new StemButton
+            var column = new BeadColumn
             {
-                StemHeight = Math.Max((double)days[i].Count / ceiling * height, height * MinStemFraction),
+                Width = cell,
+                Height = height,
                 Tag = i,
             };
 
+            // the day is the focus stop; individual beads are not reachable
             AutomationProperties.SetName(
-                stem,
+                column,
                 $"{Format.DayLabel(days[i].Date)}, {days[i].Count} {(days[i].Count == 1 ? "session" : "sessions")}");
 
-            stem.Click += OnStemClick;
-            stem.PointerEntered += OnStemEntered;
-            stem.PointerExited += OnStemExited;
+            column.Click += OnColumnClick;
+            column.PointerEntered += OnColumnEntered;
+            column.PointerExited += OnColumnExited;
 
-            Grid.SetColumn(stem, i);
-            _row.Children.Add(stem);
-            _stems.Add(stem);
+            Plot.Children.Add(column);
+            Place(column, i * (cell + gap), 0);
+
+            // the count is set once the column is in the tree, so its template
+            // has been applied and the beads have somewhere to go
+            column.Count = days[i].Count;
+            _columns.Add(column);
         }
 
         Render();
@@ -105,10 +102,11 @@ public sealed partial class RainChart : ChartBase
 
     protected override void PlayEntrance()
     {
-        // the fortnight falls left to right, one day behind the last
-        for (var i = 0; i < _stems.Count; i++)
+        // the metric assembles in front of the reader: every bead rains in and
+        // pools, left to right across the fortnight, bottom bead first per day
+        for (var i = 0; i < _columns.Count; i++)
         {
-            _stems[i].PlayEntrance(i * 50);
+            _columns[i].PlayEntrance(i * DayStaggerMs);
         }
     }
 
@@ -124,27 +122,26 @@ public sealed partial class RainChart : ChartBase
 
         Publish(Reading.Default(Invited
             ? $"{data.PerDay:0.0} a day — a steady fortnight"
-            : "tap a stem to read its day"));
+            : "tap a day to read it"));
     }
 
-    void ClearStems()
+    void ClearColumns()
     {
-        foreach (var stem in _stems)
+        foreach (var column in _columns)
         {
-            stem.Click -= OnStemClick;
-            stem.PointerEntered -= OnStemEntered;
-            stem.PointerExited -= OnStemExited;
-            stem.SetBead(false);
+            column.Click -= OnColumnClick;
+            column.PointerEntered -= OnColumnEntered;
+            column.PointerExited -= OnColumnExited;
+            column.SetBreathingTop(false);
+            Plot?.Children.Remove(column);
         }
 
-        _stems.Clear();
-        _row?.Children.Clear();
-        _row?.ColumnDefinitions.Clear();
+        _columns.Clear();
     }
 
-    void OnStemClick(object sender, RoutedEventArgs e)
+    void OnColumnClick(object sender, RoutedEventArgs e)
     {
-        var index = (int)((StemButton)sender).Tag;
+        var index = (int)((BeadColumn)sender).Tag;
         var days = ChartData!.Days;
 
         MarkInvited();
@@ -154,16 +151,18 @@ public sealed partial class RainChart : ChartBase
 
         Render();
 
+        // Enter and Space arrive here too, so the keyboard gets the same
+        // physical confirmation the pointer does
         if (reselected && days[index].Count > 0)
         {
-            _stems[index].Shed();
+            _columns[index].Plip();
         }
     }
 
-    void OnStemEntered(object sender, PointerRoutedEventArgs e) =>
-        Publish(Reading.Preview(ReadingFor((int)((StemButton)sender).Tag)));
+    void OnColumnEntered(object sender, PointerRoutedEventArgs e) =>
+        Publish(Reading.Preview(ReadingFor((int)((BeadColumn)sender).Tag)));
 
-    void OnStemExited(object sender, PointerRoutedEventArgs e) => PublishCurrent();
+    void OnColumnExited(object sender, PointerRoutedEventArgs e) => PublishCurrent();
 
     string ReadingFor(int index)
     {
@@ -186,13 +185,16 @@ public sealed partial class RainChart : ChartBase
 
     void Render()
     {
-        var today = _stems.Count - 1;
+        var today = _columns.Count - 1;
 
-        for (var i = 0; i < _stems.Count; i++)
+        for (var i = 0; i < _columns.Count; i++)
         {
             // with nothing chosen, today is the day being read
-            _stems[i].IsOn = _selected == i || (_selected is null && i == today);
-            _stems[i].SetBead(i == today);
+            _columns[i].IsOn = _selected == i || (_selected is null && i == today);
+
+            // the living edge lives in the data now: today's top bead breathes,
+            // but only while nothing else is being read
+            _columns[i].SetBreathingTop(i == today && _selected is null);
         }
 
         PublishCurrent();

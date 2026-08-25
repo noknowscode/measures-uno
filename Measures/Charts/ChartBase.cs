@@ -45,6 +45,23 @@ public abstract partial class ChartBase : Control, ICaptionSource
 
     public void PublishInitialReading() => PublishDefault();
 
+    /// <summary>
+    /// Replays the entrance from a clean slate. Rebuilding first matters: the
+    /// entrance animates from a known starting state, and a chart part-way
+    /// through an interaction is not one.
+    /// </summary>
+    public void Replay()
+    {
+        if (_lastWidth <= 0)
+        {
+            return;
+        }
+
+        Rebuild(_lastWidth, PlotHeight);
+        PlayEntrance();
+        PublishDefault();
+    }
+
     protected override void OnApplyTemplate()
     {
         base.OnApplyTemplate();
