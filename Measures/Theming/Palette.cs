@@ -11,13 +11,14 @@ namespace Measures.Theming;
 /// </summary>
 public static class Palette
 {
-    public enum Token { Mist, Mist2, Card, Ink, Quiet, Ai }
+    public enum Token { Mist, Mist2, Card, CardLit, Ink, Quiet, Ai }
 
     static readonly Color[] Light =
     [
         Color.FromArgb(255, 0xF6, 0xF7, 0xF5), // Mist
         Color.FromArgb(255, 0xF1, 0xF3, 0xF1), // Mist2
         Color.FromArgb(255, 0xFB, 0xFC, 0xFB), // Card
+        Color.FromArgb(255, 0xFC, 0xFD, 0xFC), // CardLit
         Color.FromArgb(255, 0x2C, 0x2E, 0x2C), // Ink
         Color.FromArgb(255, 0x9A, 0xA0, 0x9B), // Quiet
         Color.FromArgb(255, 0x5A, 0x6C, 0x8F), // Ai
@@ -28,6 +29,7 @@ public static class Palette
         Color.FromArgb(255, 0x15, 0x17, 0x14), // Mist
         Color.FromArgb(255, 0x10, 0x12, 0x10), // Mist2
         Color.FromArgb(255, 0x1B, 0x1E, 0x1B), // Card
+        Color.FromArgb(255, 0x1D, 0x20, 0x1D), // CardLit
         Color.FromArgb(255, 0xE6, 0xE8, 0xE4), // Ink
         Color.FromArgb(255, 0x87, 0x8E, 0x87), // Quiet
         Color.FromArgb(255, 0x8F, 0xA3, 0xCB), // Ai
@@ -37,7 +39,8 @@ public static class Palette
     [
         ("MistBrush",      Token.Mist,  1.00),
         ("Mist2Brush",     Token.Mist2, 1.00),
-        ("CardBrush",      Token.Card,  1.00),
+        ("CardBrush",      Token.Card,    1.00),
+        ("CardLitBrush",   Token.CardLit, 1.00),
         ("InkBrush",       Token.Ink,   1.00),
         ("QuietBrush",     Token.Quiet, 1.00),
         ("AiBrush",        Token.Ai,    1.00),
@@ -52,7 +55,8 @@ public static class Palette
 
     static readonly (string Key, (Token Token, double Alpha)[] Stops)[] Gradients =
     [
-        ("PageBrush",      [(Token.Mist, 1.00), (Token.Mist2, 1.00)]),
+        ("PageBrush",        [(Token.Mist, 1.00), (Token.Mist2, 1.00)]),
+        ("CardSurfaceBrush", [(Token.CardLit, 1.00), (Token.Card, 1.00), (Token.Card, 1.00), (Token.Mist, 1.00)]),
         ("RidgeMistBrush", [(Token.Ai, 0.16), (Token.Ai, 0.00)]),
         ("NightSkyBrush",  [(Token.Ai, 0.00), (Token.Ai, 0.10), (Token.Ai, 0.10), (Token.Ai, 0.00)]),
         ("RestFillBrush",  [(Token.Ai, 0.20), (Token.Ai, 0.02)]),

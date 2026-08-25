@@ -363,7 +363,7 @@
                 <ControlTemplate TargetType="controls:MeasureCard">
                     <Grid x:Name="PART_Rise">
                         <Border
-                            Background="{StaticResource CardBrush}"
+                            Background="{StaticResource CardSurfaceBrush}"
                             BorderBrush="{StaticResource HairlineBrush}"
                             BorderThickness="1"
                             CornerRadius="24">

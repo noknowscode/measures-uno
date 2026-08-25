@@ -23,6 +23,7 @@
     <SolidColorBrush x:Key="MistBrush"      Color="#F6F7F5" />
     <SolidColorBrush x:Key="Mist2Brush"     Color="#F1F3F1" />
     <SolidColorBrush x:Key="CardBrush"      Color="#FBFCFB" />
+    <SolidColorBrush x:Key="CardLitBrush"   Color="#FCFDFC" />
     <SolidColorBrush x:Key="InkBrush"       Color="#2C2E2C" />
     <SolidColorBrush x:Key="QuietBrush"     Color="#9AA09B" />
     <SolidColorBrush x:Key="AiBrush"        Color="#5A6C8F" />
@@ -37,6 +38,25 @@
     <LinearGradientBrush x:Key="PageBrush" StartPoint="0,0" EndPoint="0,1">
         <GradientStop Offset="0" Color="#F6F7F5" />
         <GradientStop Offset="1" Color="#F1F3F1" />
+    </LinearGradientBrush>
+
+    <!--
+      The device face, lit from above and dissolving into the table at its foot.
+      The last stop is the Mist token exactly, which is what makes the foot
+      dissolve instead of darken - and the charts are pinned there, so each
+      instrument ends up floating on mist inside its own face. Achromatic on
+      purpose: indigo is reserved for things that are alive.
+
+      Three zones, shaped against 8-bit banding rather than drawn as one ramp:
+      a single-level lift across the top (one step, so it cannot band), a
+      genuinely flat middle, and the whole dissolve concentrated in the bottom
+      38% where five levels fall close enough together to read as air.
+    -->
+    <LinearGradientBrush x:Key="CardSurfaceBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Offset="0"    Color="#FCFDFC" />
+        <GradientStop Offset="0.30" Color="#FBFCFB" />
+        <GradientStop Offset="0.62" Color="#FBFCFB" />
+        <GradientStop Offset="1"    Color="#F6F7F5" />
     </LinearGradientBrush>
 
     <!-- the mist under the ridge -->
