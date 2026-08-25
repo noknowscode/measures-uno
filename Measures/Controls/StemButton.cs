@@ -140,8 +140,9 @@ public sealed partial class StemButton : ButtonBase
             return;
         }
 
-        var shift = new TranslateTransform();
+        var shift = new TranslateTransform { Y = -46 };
         _stem.RenderTransform = shift;
+        _stem.Opacity = 0;
 
         Anim.Animate(shift, "Y", -46, 0, 600, Anim.Gravity, delayMs);
         Anim.Animate(_stem, "Opacity", 0, 1, 330, Anim.Gravity, delayMs);

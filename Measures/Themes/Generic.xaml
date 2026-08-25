@@ -199,6 +199,108 @@
         </Setter>
     </Style>
 
+    <Style TargetType="charts:NightChart" BasedOn="{StaticResource ChartHostStyle}">
+        <Setter Property="IsTabStop" Value="True" />
+        <Setter Property="UseSystemFocusVisuals" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="charts:NightChart">
+                    <!-- Background makes the whole plot pressable, not just the ink -->
+                    <Canvas
+                        x:Name="PART_Plot"
+                        Height="{TemplateBinding PlotHeight}"
+                        Background="Transparent">
+                        <Rectangle
+                            x:Name="PART_Sky"
+                            Fill="{StaticResource NightSkyBrush}"
+                            RadiusX="6"
+                            RadiusY="6" />
+                        <Line
+                            x:Name="PART_Horizon"
+                            Stroke="{StaticResource InkSoft12Brush}"
+                            StrokeThickness="1" />
+                        <Path x:Name="PART_Rest" Fill="{StaticResource RestFillBrush}" />
+                        <Path
+                            x:Name="PART_Curve"
+                            Stroke="{StaticResource AiBrush}"
+                            StrokeEndLineCap="Round"
+                            StrokeLineJoin="Round"
+                            StrokeStartLineCap="Round"
+                            StrokeThickness="1.5" />
+                        <Ellipse
+                            x:Name="PART_Wake"
+                            Width="7"
+                            Height="7"
+                            Fill="{StaticResource AiBrush}" />
+                        <Line
+                            x:Name="PART_ScrubLine"
+                            Opacity="0"
+                            Stroke="{StaticResource AiSoft40Brush}"
+                            StrokeThickness="1" />
+                        <Ellipse
+                            x:Name="PART_ScrubDot"
+                            Width="6"
+                            Height="6"
+                            Opacity="0"
+                            Fill="{StaticResource AiBrush}" />
+                    </Canvas>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="charts:RoadChart" BasedOn="{StaticResource ChartHostStyle}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="charts:RoadChart">
+                    <Canvas x:Name="PART_Plot" Height="{TemplateBinding PlotHeight}">
+                        <!-- the road ahead, still dashed -->
+                        <Path
+                            x:Name="PART_Ghost"
+                            Stroke="{StaticResource InkSoft22Brush}"
+                            StrokeEndLineCap="Round"
+                            StrokeStartLineCap="Round"
+                            StrokeThickness="1" />
+                        <!-- the wake the runner leaves -->
+                        <Path
+                            x:Name="PART_Trace"
+                            Opacity="0"
+                            Stroke="{StaticResource AiBrush}"
+                            StrokeEndLineCap="Round"
+                            StrokeStartLineCap="Round"
+                            StrokeThickness="2.5" />
+                        <Path
+                            x:Name="PART_Progress"
+                            Stroke="{StaticResource AiBrush}"
+                            StrokeEndLineCap="Round"
+                            StrokeStartLineCap="Round"
+                            StrokeThickness="2" />
+                        <Ellipse
+                            x:Name="PART_Start"
+                            Width="4"
+                            Height="4"
+                            Fill="{StaticResource InkBrush}" />
+                        <Ellipse
+                            x:Name="PART_Echo"
+                            Width="8"
+                            Height="8"
+                            Opacity="0"
+                            Stroke="{StaticResource AiBrush}"
+                            StrokeThickness="1.5" />
+                        <Ellipse
+                            x:Name="PART_Runner"
+                            Width="6"
+                            Height="6"
+                            Opacity="0"
+                            Fill="{StaticResource AiBrush}"
+                            Stroke="{StaticResource CardBrush}"
+                            StrokeThickness="1" />
+                    </Canvas>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- ══ MeasureCard ══ -->
 
     <Style TargetType="controls:MeasureCard">
@@ -261,7 +363,7 @@
                                             Content="{TemplateBinding Content}"
                                             ContentTemplate="{TemplateBinding ContentTemplate}"
                                             HorizontalAlignment="Stretch" />
-                                        <Grid x:Name="PART_Axis" Margin="0,8,0,0" />
+                                        <Canvas x:Name="PART_Axis" Margin="0,8,0,0" />
                                     </StackPanel>
                                 </Grid>
 

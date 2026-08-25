@@ -17,7 +17,8 @@ param(
     [int] $CropX = 0,
     [int] $CropY = 0,
     [int] $CropW = 0,
-    [int] $CropH = 0
+    [int] $CropH = 0,
+    [int] $Zoom = 1
 )
 
 $ErrorActionPreference = 'Stop'
@@ -39,6 +40,12 @@ public static extern bool IsWindowVisible(System.IntPtr hwnd);
 
 [System.Runtime.InteropServices.DllImport("user32.dll")]
 public static extern bool SetWindowPos(System.IntPtr hwnd, System.IntPtr after, int x, int y, int cx, int cy, uint flags);
+
+[System.Runtime.InteropServices.DllImport("user32.dll")]
+public static extern bool BringWindowToTop(System.IntPtr hwnd);
+
+[System.Runtime.InteropServices.DllImport("user32.dll")]
+public static extern bool ShowWindow(System.IntPtr hwnd, int cmd);
 
 public struct RECT { public int Left; public int Top; public int Right; public int Bottom; }
 '@
@@ -77,30 +84,51 @@ $rect = New-Object Native.Win32Capture+RECT
 $w = $rect.Right - $rect.Left
 $h = $rect.Bottom - $rect.Top
 
-$bmp = New-Object System.Drawing.Bitmap $w, $h
-$gfx = [System.Drawing.Graphics]::FromImage($bmp)
-$hdc = $gfx.GetHdc()
-$ok = [Native.Win32Capture]::PrintWindow($hwnd, $hdc, 2)  # PW_RENDERFULLCONTENT
-$gfx.ReleaseHdc($hdc)
-$gfx.Dispose()
+function Get-WindowBitmap([IntPtr] $hwnd, [int] $w, [int] $h) {
+    $bmp = New-Object System.Drawing.Bitmap $w, $h
+    $gfx = [System.Drawing.Graphics]::FromImage($bmp)
+    $hdc = $gfx.GetHdc()
+    $ok = [Native.Win32Capture]::PrintWindow($hwnd, $hdc, 2)  # PW_RENDERFULLCONTENT
+    $gfx.ReleaseHdc($hdc)
+    $gfx.Dispose()
 
-# a TRUE return is not evidence of pixels - sample before trusting it
-$distinct = @{}
-for ($y = 0; $y -lt $h; $y += [Math]::Max(1, [int]($h / 24))) {
-    for ($x = 0; $x -lt $w; $x += [Math]::Max(1, [int]($w / 24))) {
-        $distinct[$bmp.GetPixel($x, $y).ToArgb()] = $true
+    # a TRUE return is not evidence of pixels - sample before trusting it
+    $distinct = @{}
+    for ($y = 0; $y -lt $h; $y += [Math]::Max(1, [int]($h / 24))) {
+        for ($x = 0; $x -lt $w; $x += [Math]::Max(1, [int]($w / 24))) {
+            $distinct[$bmp.GetPixel($x, $y).ToArgb()] = $true
+        }
     }
+
+    if ($ok -and $distinct.Count -ge 4) { return $bmp }
+    $bmp.Dispose()
+    return $null
 }
 
-if (-not $ok -or $distinct.Count -lt 4) {
-    Write-Host "PrintWindow returned $ok with $($distinct.Count) distinct sampled colours; falling back to screen copy."
-    $bmp.Dispose()
+$bmp = $null
+foreach ($attempt in 1..5) {
+    $bmp = Get-WindowBitmap $hwnd $w $h
+    if ($bmp) { break }
+    Write-Host "PrintWindow came back blank (attempt $attempt); retrying."
+    Start-Sleep -Milliseconds 600
+}
+
+if (-not $bmp) {
+    # last resort: force the window in front, because CopyFromScreen is not
+    # occlusion-proof and will happily photograph whatever is covering it
+    Write-Host 'Falling back to a foreground screen copy.'
+    [void][Native.Win32Capture]::ShowWindow($hwnd, 9)          # SW_RESTORE
+    [void][Native.Win32Capture]::SetWindowPos($hwnd, [IntPtr](-1), 0, 0, 0, 0, 0x0003)  # TOPMOST, no move/size
+    [void][Native.Win32Capture]::BringWindowToTop($hwnd)
     [void][Native.Win32Capture]::SetForegroundWindow($hwnd)
-    Start-Sleep -Milliseconds 700
+    Start-Sleep -Milliseconds 1200
+
+    [void][Native.Win32Capture]::GetWindowRect($hwnd, [ref]$rect)
     $bmp = New-Object System.Drawing.Bitmap $w, $h
     $gfx = [System.Drawing.Graphics]::FromImage($bmp)
     $gfx.CopyFromScreen($rect.Left, $rect.Top, 0, 0, $bmp.Size)
     $gfx.Dispose()
+    [void][Native.Win32Capture]::SetWindowPos($hwnd, [IntPtr](-2), 0, 0, 0, 0, 0x0003)  # NOTOPMOST
 }
 
 if ($CropW -gt 0 -and $CropH -gt 0) {
@@ -111,6 +139,18 @@ if ($CropW -gt 0 -and $CropH -gt 0) {
     $bmp.Dispose()
     $bmp = $crop
     $w = $CropW; $h = $CropH
+}
+
+if ($Zoom -gt 1) {
+    $big = New-Object System.Drawing.Bitmap ($w * $Zoom), ($h * $Zoom)
+    $zg = [System.Drawing.Graphics]::FromImage($big)
+    $zg.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::NearestNeighbor
+    $zg.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::Half
+    $zg.DrawImage($bmp, 0, 0, ($w * $Zoom), ($h * $Zoom))
+    $zg.Dispose()
+    $bmp.Dispose()
+    $bmp = $big
+    $w = $w * $Zoom; $h = $h * $Zoom
 }
 
 $dir = Split-Path -Parent $Out

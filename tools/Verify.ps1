@@ -14,7 +14,8 @@ param(
     [int] $CropX = 0,
     [int] $CropY = 0,
     [int] $CropW = 0,
-    [int] $CropH = 0
+    [int] $CropH = 0,
+    [int] $Zoom = 1
 )
 
 $ErrorActionPreference = 'Stop'
@@ -41,7 +42,7 @@ $p = Start-Process $exe -PassThru -RedirectStandardOutput $log -RedirectStandard
     -ProcessId $p.Id `
     -Out (Join-Path $root "tools\shots\$Name.png") `
     -Width $Width -Height $Height -SettleMs $SettleMs `
-    -CropX $CropX -CropY $CropY -CropW $CropW -CropH $CropH
+    -CropX $CropX -CropY $CropY -CropW $CropW -CropH $CropH -Zoom $Zoom
 
 $unexpected = Get-Content $log -ErrorAction SilentlyContinue |
     Where-Object { $_ -match 'fail:|error' -and $_ -notmatch 'RemoteControl|DevServer|HotDesign' }

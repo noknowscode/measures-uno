@@ -97,6 +97,21 @@ public sealed partial class DotButton : ButtonBase
         }
     }
 
+    /// <summary>
+    /// The footfall settles into place as the road reaches it. The initial
+    /// values are set now, not by the animation: with a delay, the element
+    /// would render at rest for a beat before jumping back to its start.
+    /// </summary>
+    public void PlayEntrance(double delayMs)
+    {
+        var shift = new TranslateTransform { Y = -5 };
+        RenderTransform = shift;
+        Opacity = 0;
+
+        Anim.Animate(shift, "Y", -5, 0, 350, Anim.Gravity, delayMs);
+        Anim.Animate(this, "Opacity", 0, 1, 350, Anim.Gravity, delayMs);
+    }
+
     public void MoveTo(double centreX, double centreY)
     {
         Centre = new Point(centreX, centreY);

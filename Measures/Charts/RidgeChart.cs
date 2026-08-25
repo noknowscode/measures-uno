@@ -103,19 +103,15 @@ public sealed partial class RidgeChart : ChartBase
             Curves.ToGeometry(segments, closeToY: true, closeY: height),
             Curves.ToGeometry(segments));
 
-        _lineLength = CubicSampler.FromSegments(segments).TotalLength;
-
         BuildDots(days);
         Render(animate: false);
     }
 
-    double _lineLength;
-
     protected override void PlayEntrance()
     {
-        if (_line is not null && _lineLength > 0)
+        if (_line is not null && PlotWidth > 0)
         {
-            DrawIn(_line, _lineLength, 1800, 200, Anim.Hands);
+            DrawIn(_line, PlotWidth, PlotHeight, 1800, 200, Anim.Hands);
         }
 
         if (_fill is not null)

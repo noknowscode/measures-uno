@@ -1,3 +1,5 @@
+using Microsoft.UI.Xaml.Media;
+
 namespace Measures.Charts;
 
 /// <summary>One cubic Bezier segment, in chart space.</summary>
@@ -144,6 +146,79 @@ public sealed class CubicSampler
         }
 
         return _points[^1];
+    }
+
+    /// <summary>
+    /// The stretch of the curve between two arc lengths, as a polyline through
+    /// the samples with exact endpoints. StrokeDashArray does not render on this
+    /// target, so a partial stroke has to be a partial geometry.
+    /// </summary>
+    public PathFigure FigureBetween(double fromLength, double toLength)
+    {
+        var from = Math.Clamp(Math.Min(fromLength, toLength), 0, TotalLength);
+        var to = Math.Clamp(Math.Max(fromLength, toLength), 0, TotalLength);
+
+        var figure = new PathFigure { StartPoint = PointAtLength(from), IsFilled = false };
+
+        for (var i = 0; i < _points.Length; i++)
+        {
+            if (_cumulative[i] <= from)
+            {
+                continue;
+            }
+
+            if (_cumulative[i] >= to)
+            {
+                break;
+            }
+
+            figure.Segments.Add(new LineSegment { Point = _points[i] });
+        }
+
+        figure.Segments.Add(new LineSegment { Point = PointAtLength(to) });
+
+        return figure;
+    }
+
+    public PathGeometry GeometryBetween(double fromLength, double toLength)
+    {
+        var geometry = new PathGeometry();
+        geometry.Figures.Add(FigureBetween(fromLength, toLength));
+
+        return geometry;
+    }
+
+    /// <summary>
+    /// The curve as a run of separate dashes, drawn rather than stroked.
+    /// <paramref name="phase"/> shifts the pattern along the curve, which is
+    /// what makes the road march.
+    /// </summary>
+    public PathGeometry DashedGeometry(double dash, double gap, double phase = 0)
+    {
+        var geometry = new PathGeometry();
+        var period = dash + gap;
+
+        if (dash <= 0 || period <= 0)
+        {
+            return geometry;
+        }
+
+        // start at the last dash boundary at or before zero, so a shifted
+        // pattern still fills the whole curve rather than leaving a bald head
+        var start = -(((phase % period) + period) % period);
+
+        for (var at = start; at < TotalLength; at += period)
+        {
+            var from = Math.Max(at, 0);
+            var to = Math.Min(at + dash, TotalLength);
+
+            if (to > from)
+            {
+                geometry.Figures.Add(FigureBetween(from, to));
+            }
+        }
+
+        return geometry;
     }
 
     static Point Lerp(Point a, Point b, double t) =>

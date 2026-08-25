@@ -42,7 +42,7 @@ public sealed partial class MeasureCard : ContentControl
 
     FrameworkElement? _riseHost;
     TextBlock? _numeral;
-    Grid? _axis;
+    Canvas? _axis;
     ICaptionSource? _source;
     bool _loaded;
     bool _risen;
@@ -106,13 +106,21 @@ public sealed partial class MeasureCard : ContentControl
 
     public CaptionPresenter? Caption { get; private set; }
 
+    /// <summary>Line box for the axis row, at the 8.5 epx whisper size.</summary>
+    const double AxisHeight = 12;
+
     protected override void OnApplyTemplate()
     {
         base.OnApplyTemplate();
 
         _riseHost = GetTemplateChild("PART_Rise") as FrameworkElement;
         _numeral = GetTemplateChild("PART_Numeral") as TextBlock;
-        _axis = GetTemplateChild("PART_Axis") as Grid;
+        _axis = GetTemplateChild("PART_Axis") as Canvas;
+
+        if (_axis is not null)
+        {
+            _axis.SizeChanged += (_, _) => PlaceAxis();
+        }
         Caption = GetTemplateChild("PART_Caption") as CaptionPresenter;
 
         if (_riseHost is not null && !_risen)
@@ -248,6 +256,11 @@ public sealed partial class MeasureCard : ContentControl
         }
     }
 
+    /// <summary>
+    /// Axis whispers are anchored to the fraction of the chart they describe,
+    /// not spread evenly: on the night card those are clock hours, and an "06"
+    /// sitting at 70% of the night points at the wrong time.
+    /// </summary>
     void BuildAxis()
     {
         if (_axis is null)
@@ -256,28 +269,49 @@ public sealed partial class MeasureCard : ContentControl
         }
 
         _axis.Children.Clear();
-        _axis.ColumnDefinitions.Clear();
 
         var labels = (AxisLabels ?? string.Empty)
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-        for (var i = 0; i < labels.Length; i++)
+        foreach (var label in labels)
         {
-            _axis.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-
-            var text = new SpacedText
+            _axis.Children.Add(new SpacedText
             {
-                Text = labels[i],
+                Text = label,
                 Style = (Style)Application.Current.Resources["AxisStyle"],
-                HorizontalAlignment = i == 0
-                    ? HorizontalAlignment.Left
-                    : i == labels.Length - 1
-                        ? HorizontalAlignment.Right
-                        : HorizontalAlignment.Center,
-            };
+            });
+        }
 
-            Grid.SetColumn(text, i);
-            _axis.Children.Add(text);
+        _axis.Height = labels.Length == 0 ? 0 : AxisHeight;
+        PlaceAxis();
+    }
+
+    void PlaceAxis()
+    {
+        if (_axis is null || _axis.Children.Count == 0)
+        {
+            return;
+        }
+
+        var width = _axis.ActualWidth;
+
+        if (width <= 0)
+        {
+            return;
+        }
+
+        var last = _axis.Children.Count - 1;
+
+        for (var i = 0; i <= last; i++)
+        {
+            var label = (FrameworkElement)_axis.Children[i];
+
+            label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+
+            // the ends sit flush, everything between is centred on its tick
+            var fraction = last == 0 ? 0 : (double)i / last;
+
+            Canvas.SetLeft(label, fraction * width - label.DesiredSize.Width * fraction);
         }
     }
 }

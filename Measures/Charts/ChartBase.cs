@@ -71,18 +71,21 @@ public abstract partial class ChartBase : Control, ICaptionSource
     protected void MarkInvited() => Invited = true;
 
     /// <summary>
-    /// Reveals a stroked path from its start. XAML has no pathLength
-    /// normalisation, so the dash is expressed in stroke-thickness units off
-    /// the measured polyline length.
+    /// Reveals a stroked path from its left edge. The dash-offset draw-in the
+    /// prototype uses is unavailable here - StrokeDashArray does not render on
+    /// this target - so the line is wiped in behind a widening clip instead.
+    /// Every curve on this page is monotonic in x, so a wipe and a draw-in are
+    /// the same gesture.
     /// </summary>
-    protected static void DrawIn(Path path, double length, double ms, double delayMs, KeySpline spline)
+    protected static Ticker DrawIn(FrameworkElement path, double width, double height, double ms, double delayMs, KeySpline spline)
     {
-        var units = length / Math.Max(path.StrokeThickness, 0.0001);
+        // generous vertically: the clip must not shave the stroke or its caps
+        var clip = new RectangleGeometry { Rect = new Rect(0, -height, 0, height * 3) };
+        path.Clip = clip;
 
-        path.StrokeDashArray = [units, units];
-        path.StrokeDashOffset = units;
-
-        Anim.Animate(path, "StrokeDashOffset", units, 0, ms, spline, delayMs);
+        return Ticker.Run(ms, delayMs, Anim.Curve(spline),
+            eased => clip.Rect = new Rect(0, -height, width * eased, height * 3),
+            done: () => path.Clip = null);
     }
 
     /// <summary>The late fade the mist and the sky share: hold, then arrive.</summary>

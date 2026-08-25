@@ -127,7 +127,9 @@
                         FootRight="restful"
                         HeadLeft="Sleep"
                         HeadRight="Last night"
-                        RiseDelay="240" />
+                        RiseDelay="240">
+                        <charts:NightChart x:Name="Night" />
+                    </controls:MeasureCard>
 
                     <controls:MeasureCard
                         x:Name="RoadCard"
@@ -137,7 +139,9 @@
                         AxisLabels="0, 25 km"
                         HeadLeft="Running"
                         HeadRight="This week"
-                        RiseDelay="360" />
+                        RiseDelay="360">
+                        <charts:RoadChart x:Name="Road" />
+                    </controls:MeasureCard>
 
                 </Grid>
             </Grid>

@@ -35,11 +35,13 @@ public sealed partial class MeasuresPage : Page
         RainCard.AxisLabels = $"{Format.DayLabel(sessions.Days[0].Date)}, today";
 
         var night = SampleData.Night;
+        Night.ChartData = night;
         NightCard.NumeralValue = night.Slept.Hours.ToString(CultureInfo.InvariantCulture);
         NightCard.NumeralSuffix = " h ";
         NightCard.NumeralTail = night.Slept.Minutes.ToString("00", CultureInfo.InvariantCulture);
 
         var runs = SampleData.Runs;
+        Road.ChartData = runs;
         RoadCard.NumeralValue = runs.Ran.ToString("0.#", CultureInfo.InvariantCulture);
         RoadCard.NumeralSuffix = $" of {runs.GoalKm:0.#} km";
         RoadCard.FootRight = runs.Runs.Count == 1 ? "1 run" : $"{runs.Runs.Count} runs";

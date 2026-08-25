@@ -57,6 +57,69 @@ public static class Anim
     public static double EaseInOutQuad(double u) =>
         u < 0.5 ? 2 * u * u : 1 - Math.Pow(-2 * u + 2, 2) / 2;
 
+    public static Func<double, double> Linear => u => u;
+
+    /// <summary>
+    /// The same curve a KeySpline describes, evaluated in code, for the motion
+    /// a Storyboard cannot reach. Time is solved for by bisection: the bezier
+    /// gives x and y from a parameter, and easing needs y at a given x.
+    /// </summary>
+    public static Func<double, double> Curve(KeySpline spline)
+    {
+        var x1 = spline.ControlPoint1.X;
+        var y1 = spline.ControlPoint1.Y;
+        var x2 = spline.ControlPoint2.X;
+        var y2 = spline.ControlPoint2.Y;
+
+        return u =>
+        {
+            if (u <= 0)
+            {
+                return 0;
+            }
+
+            if (u >= 1)
+            {
+                return 1;
+            }
+
+            var low = 0d;
+            var high = 1d;
+            var t = u;
+
+            for (var i = 0; i < 24; i++)
+            {
+                var x = Bezier(t, x1, x2);
+
+                if (Math.Abs(x - u) < 1e-5)
+                {
+                    break;
+                }
+
+                if (x < u)
+                {
+                    low = t;
+                }
+                else
+                {
+                    high = t;
+                }
+
+                t = (low + high) / 2;
+            }
+
+            return Bezier(t, y1, y2);
+        };
+    }
+
+    /// <summary>A unit cubic bezier with anchors at 0 and 1.</summary>
+    static double Bezier(double t, double p1, double p2)
+    {
+        var u = 1 - t;
+
+        return 3 * u * u * t * p1 + 3 * u * t * t * p2 + t * t * t;
+    }
+
     public static Storyboard Animate(
         DependencyObject target,
         string property,
