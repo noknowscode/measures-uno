@@ -18,7 +18,14 @@ public sealed partial class MeasuresPage : Page
 
         // on activation focus lands on the first chart mark, and the scroll
         // viewer brings it into view - the page would open part way down
-        Loaded += (_, _) => Scroll.ChangeView(null, 0, null, disableAnimation: true);
+        Loaded += (_, _) =>
+        {
+            // on activation focus lands on the first focusable control, which
+            // scrolls the page down and paints a focus ring nobody asked for.
+            // Park it on the root instead; Tab still walks into the bench.
+            Root.Focus(FocusState.Programmatic);
+            Scroll.ChangeView(null, 0, null, disableAnimation: true);
+        };
 
     }
 

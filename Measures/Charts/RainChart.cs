@@ -15,8 +15,8 @@ public sealed partial class RainChart : ChartBase
     /// <summary>Flex gap between columns, as a fraction of the row width.</summary>
     const double GapFraction = 0.045;
 
-    /// <summary>Each day rains in 50 ms behind the last.</summary>
-    const double DayStaggerMs = 50;
+    /// <summary>Each day rains in behind the last, left to right.</summary>
+    const double DayStaggerMs = 90;
 
     public static readonly DependencyProperty ChartDataProperty = DependencyProperty.Register(
         nameof(ChartData), typeof(SessionLog), typeof(RainChart), new PropertyMetadata(null, OnDataChanged));

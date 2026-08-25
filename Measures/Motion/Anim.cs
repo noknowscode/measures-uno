@@ -211,6 +211,14 @@ public static class Anim
         return Run(target, property, animation, null);
     }
 
+    /// <summary>
+    /// Storyboards in flight, held so they cannot be collected. Nothing else
+    /// roots them, and one waiting out a BeginTime delay is especially exposed:
+    /// it can be collected before it ever starts, which reads as an element
+    /// stuck at its "from" value while its undelayed siblings animate fine.
+    /// </summary>
+    static readonly List<Storyboard> Live = [];
+
     static Storyboard Run(DependencyObject target, string property, Timeline animation, Action? completed)
     {
         Storyboard.SetTarget(animation, target);
@@ -219,10 +227,15 @@ public static class Anim
         var board = new Storyboard();
         board.Children.Add(animation);
 
-        if (completed is not null)
+        board.Completed += (_, _) =>
         {
-            board.Completed += (_, _) => completed();
-        }
+            Live.Remove(board);
+            completed?.Invoke();
+        };
+
+        // a stopped board never raises Completed, so sweep on the way in
+        Live.RemoveAll(b => b.GetCurrentState() == ClockState.Stopped);
+        Live.Add(board);
 
         board.Begin();
         return board;

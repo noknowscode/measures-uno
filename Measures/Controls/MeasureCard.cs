@@ -214,20 +214,12 @@ public sealed partial class MeasureCard : ContentControl
         Anim.Animate(_rise, "Y", 14, 0, 900, Anim.Hands, RiseDelay);
     }
 
-    /// <summary>Rises again, and asks its instrument to do the same.</summary>
-    public void Replay()
-    {
-        if (_riseHost is not null && Anim.Enabled)
-        {
-            _riseHost.Opacity = 0;
-            _rise.Y = 14;
-
-            Anim.Animate(_riseHost, "Opacity", 0, 1, 900, Anim.Hands, RiseDelay);
-            Anim.Animate(_rise, "Y", 14, 0, 900, Anim.Hands, RiseDelay);
-        }
-
-        _source?.Replay();
-    }
+    /// <summary>
+    /// Asks the instrument to draw itself in again. The card itself does not
+    /// rise a second time: the rise is an arrival, and the cards have already
+    /// arrived - replaying it would just make the page flinch.
+    /// </summary>
+    public void Replay() => _source?.Replay();
 
     void OnUnloaded(object sender, RoutedEventArgs e)
     {

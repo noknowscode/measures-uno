@@ -6,7 +6,7 @@
     xmlns:controls="using:Measures.Controls"
     Background="{StaticResource PageBrush}">
 
-    <Grid x:Name="Root">
+    <Grid x:Name="Root" IsTabStop="True" UseSystemFocusVisuals="False">
 
     <VisualStateManager.VisualStateGroups>
         <VisualStateGroup>

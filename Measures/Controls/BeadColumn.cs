@@ -26,8 +26,11 @@ public sealed partial class BeadColumn : ButtonBase
     const double Pitch = BeadSize + StackGap;
     const double RestRingSize = 5;
 
-    const double FallMs = 450;
-    const double BeadStaggerMs = 70;
+    const double FallMs = 620;
+    const double BeadStaggerMs = 110;
+
+    /// <summary>How far above the plot a bead starts, so it arrives from the sky.</summary>
+    const double SkyOffset = 130;
 
     const double HopHeight = -7;
     const double HopMs = 300;
@@ -50,6 +53,7 @@ public sealed partial class BeadColumn : ButtonBase
     int _count;
     bool _isOn;
     bool _breathes;
+    double? _pendingEntrance;
 
     public BeadColumn()
     {
@@ -135,7 +139,12 @@ public sealed partial class BeadColumn : ButtonBase
         ApplyBreath();
     }
 
-    /// <summary>The day rains in, bottom bead first.</summary>
+    /// <summary>
+    /// The day rains in, bottom bead first. The request is remembered rather
+    /// than run on the spot: a column added to the tree has not necessarily had
+    /// its template applied yet, so the beads it is meant to drop may not exist
+    /// for another layout pass. Build runs whatever is still pending.
+    /// </summary>
     public void PlayEntrance(double delayMs)
     {
         if (!Anim.Enabled)
@@ -143,18 +152,46 @@ public sealed partial class BeadColumn : ButtonBase
             return;
         }
 
+        _pendingEntrance = delayMs;
+        RunPendingEntrance();
+    }
+
+    void RunPendingEntrance()
+    {
+        if (_pendingEntrance is not { } delayMs)
+        {
+            return;
+        }
+
+        // an empty day has no beads to drop, but it still has to arrive with
+        // the rest of the fortnight rather than sit there waiting for it
+        if (_rest is not null)
+        {
+            _pendingEntrance = null;
+            _rest.Opacity = 0;
+            Track(Anim.Animate(_rest, "Opacity", 0, 1, 400, Anim.Ease, delayMs));
+            return;
+        }
+
+        if (_beads.Count == 0)
+        {
+            return;
+        }
+
+        _pendingEntrance = null;
+
         for (var i = 0; i < _beads.Count; i++)
         {
-            // every bead enters from above the plot, not from a fixed offset, so
-            // the column visibly stacks: the bottom bead falls furthest and
-            // lands first, and each one after it comes to rest on the pile
+            // each bead comes in from well above the card and drops into its
+            // slot, so the column visibly stacks: the bottom bead falls furthest
+            // and lands first, and every one after it settles onto the pile
             var rest = Canvas.GetTop(_beads[i]);
-            var from = -(rest + BeadSize);
+            var from = -(rest + BeadSize + SkyOffset);
             var fall = Math.Abs(from);
 
             // one gravity for all of them: time goes with the square root of the
             // distance, the same law the droplet fell under
-            var ms = Math.Max(FallMs * Math.Sqrt(fall / (Height + BeadSize)), FallMs * 0.45);
+            var ms = FallMs * Math.Sqrt(fall / (Height + SkyOffset));
 
             var shift = new TranslateTransform { Y = from };
             _beads[i].RenderTransform = shift;
@@ -163,7 +200,9 @@ public sealed partial class BeadColumn : ButtonBase
             var begin = delayMs + i * BeadStaggerMs;
 
             Track(Anim.Animate(shift, "Y", from, 0, ms, Anim.Gravity, begin));
-            Track(Anim.Animate(_beads[i], "Opacity", 0, 1, ms * 0.4, Anim.Gravity, begin));
+            // in before it is halfway down, so it is a falling bead and not a
+            // bead that materialises at the moment it lands
+            Track(Anim.Animate(_beads[i], "Opacity", 0, 1, ms * 0.25, Anim.Gravity, begin));
         }
     }
 
@@ -285,6 +324,7 @@ public sealed partial class BeadColumn : ButtonBase
 
         PlacePlip();
         ApplyBreath();
+        RunPendingEntrance();
     }
 
     void PlacePlip()
