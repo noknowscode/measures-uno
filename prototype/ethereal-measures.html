@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>measures</title>
+<link href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@400&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;1,6..72,300&display=swap" rel="stylesheet">
+<style>
+  /* The law of the page: history is drawn in ink, the living edge in indigo.
+     The night curve is the one sanctioned exception — a single night is all
+     living, so it wears indigo end to end. Gravity eases in; hands ease out. */
+  :root {
+    --mist: #F6F7F5; --mist2: #F1F3F1; --card: #FBFCFB;
+    --ink: #2C2E2C; --quiet: #9AA09B;
+    --ink-rgb: 44,46,44; --ai: #5A6C8F; --ai-rgb: 90,108,143;
+    --hairline: rgba(44,46,44,0.10);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --mist: #151714; --mist2: #101210; --card: #1B1E1B;
+      --ink: #E6E8E4; --quiet: #878E87;
+      --ink-rgb: 230,232,228; --ai: #8FA3CB; --ai-rgb: 143,163,203;
+      --hairline: rgba(230,232,228,0.10);
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    min-height: 100vh;
+    background: linear-gradient(180deg, var(--mist), var(--mist2));
+    padding: clamp(20px, 4vw, 56px);
+    color: var(--ink);
+  }
+  .wrap { max-width: 880px; margin: 0 auto; }
+  .label {
+    font-family: 'Martian Mono', monospace; font-size: 9.5px;
+    letter-spacing: 0.18em; color: var(--quiet); text-transform: uppercase;
+  }
+  .numeral, h1 {
+    font-family: 'Newsreader', serif; font-weight: 300; color: var(--ink);
+    line-height: 1; font-variant-numeric: tabular-nums;
+  }
+  .caption {
+    font-family: 'Newsreader', serif; font-weight: 300; font-style: italic;
+    font-size: 15px; color: var(--quiet); transition: color 0.4s ease, opacity 0.14s ease;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    flex: 1; min-width: 0;
+  }
+  .caption.live { color: var(--ai); }
+  header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 28px; }
+  h1 { font-size: 26px; font-style: italic; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+  .card {
+    position: relative; overflow: hidden; background: var(--card);
+    border: 1px solid var(--hairline); border-radius: 24px; min-height: 300px;
+    display: flex; flex-direction: column;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 12px 40px rgba(0,0,0,0.05);
+    animation: rise 0.9s cubic-bezier(0.22,1,0.36,1) both;
+  }
+  .head, .foot { position: relative; padding: 28px; display: flex; justify-content: space-between; align-items: baseline; }
+  .head { padding-bottom: 16px; }
+  .foot { gap: 12px; }
+  .foot .label { flex-shrink: 0; }
+  .body { position: relative; flex: 1; display: flex; align-items: stretch; padding: 0 28px; }
+  /* numeral tops and chart bottoms line up across every card */
+  .metric-col { display: flex; flex-direction: column; justify-content: space-between; gap: 22px; width: 100%; }
+  .metric-num { font-size: 60px; height: 60px; }
+  .metric-num .soft { font-size: 24px; color: var(--quiet); font-style: italic; }
+  .hour-row { display: flex; justify-content: space-between; margin-top: 8px; }
+  .hour-row span { font-family: 'Martian Mono', monospace; font-size: 8.5px; letter-spacing: 0.12em; color: var(--quiet); }
+  svg { overflow: visible; display: block; }
+
+  @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @keyframes draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+  .draw-path { stroke-dasharray: 1; animation: draw 1.8s cubic-bezier(0.22,1,0.36,1) 0.2s both; }
+  @keyframes fadeLate { 0%,40% { opacity: 0; } 100% { opacity: 1; } }
+  .fade-late { animation: fadeLate 2.4s ease both; }
+  @keyframes rainfall { 0% { transform: translateY(-46px); opacity: 0; } 55% { opacity: 1; } 100% { transform: translateY(0); opacity: 1; } }
+  .stem { animation: rainfall 0.6s cubic-bezier(0.4,0,1,1) both; }
+  @keyframes settle { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: none; } }
+  .runpt { animation: settle 0.35s cubic-bezier(0.4,0,1,1) both; cursor: pointer; }
+  @keyframes breatheR { 0%,100% { r: 3.5; } 50% { r: 5; } }
+  .breathe-svg, .runpt .mark.today, .pt .mark.today { animation: breatheR 5s ease-in-out infinite; }
+  @keyframes runDraw { from { stroke-dashoffset: 72.8; } to { stroke-dashoffset: 0; } }
+  .run-progress { stroke: var(--ai); stroke-dasharray: 72.8 100; animation: runDraw 1.6s cubic-bezier(0.22,1,0.36,1) 0.3s both; }
+  @keyframes march { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -18; } }
+  .march { animation: march 1.2s ease-out; }
+  @keyframes plumb { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+  .plumb { animation: plumb 0.3s cubic-bezier(0.4,0,1,1) both; }
+  @keyframes goalHello { 0% { r: 4; opacity: 0.7; } 100% { r: 13; opacity: 0; } }
+  .goal-echo { fill: none; stroke: var(--ai); stroke-width: 1.5; opacity: 0; animation: goalHello 1.4s ease-out 2.2s 1 both; }
+
+  /* ink / indigo assignments (all theme-aware) */
+  #ridgeLine { stroke: var(--ink); }
+  #pinLine { stroke: rgba(var(--ai-rgb), 0.5); transition: opacity 0.3s ease; }
+  .horizon { stroke: rgba(var(--ink-rgb), 0.12); }
+  #nightCurve { stroke: var(--ai); }
+  .wakedot, #scrubDot { fill: var(--ai); }
+  #scrubLine { stroke: rgba(var(--ai-rgb), 0.4); }
+  #scrubLine, #scrubDot { transition: opacity 0.3s ease; }
+  #routeGhost { stroke: rgba(var(--ink-rgb), 0.22); }
+  #tracePath { stroke: var(--ai); stroke-width: 2.5; opacity: 0; }
+  .start-dot { fill: var(--ink); }
+  .goal-ring { fill: none; stroke: var(--ink); stroke-width: 1.5; opacity: 0.5; }
+  .runner { fill: var(--ai); stroke: var(--card); stroke-width: 1; }
+  .runpt .mark { fill: var(--ai); stroke: var(--card); stroke-width: 1.5; transition: r 0.3s ease; }
+  .pt { cursor: pointer; }
+  .pt .mark { fill: var(--card); stroke: var(--ink); stroke-width: 1.5; transition: r 0.3s ease, fill 0.3s ease, stroke 0.3s ease; }
+  .pt .mark.hot { fill: var(--ai); stroke: var(--ai); }
+  .s-ai-20 { stop-color: var(--ai); stop-opacity: 0.20; }
+  .s-ai-16 { stop-color: var(--ai); stop-opacity: 0.16; }
+  .s-ai-10 { stop-color: var(--ai); stop-opacity: 0.10; }
+  .s-ai-02 { stop-color: var(--ai); stop-opacity: 0.02; }
+  .s-ai-0  { stop-color: var(--ai); stop-opacity: 0; }
+
+  /* rain */
+  .rainrow { display: flex; align-items: flex-end; gap: 4.5%; width: 100%; height: 92px; }
+  .rainbtn { position: relative; background: none; border: none; padding: 0; cursor: pointer; flex: 1; height: 100%; display: flex; align-items: flex-end; justify-content: center; }
+  .stem-el { position: relative; width: 1.5px; background: rgba(var(--ink-rgb), 0.35); border-radius: 1px; transition: background 0.3s ease; }
+  .stem-el.on { background: var(--ai); }
+  .stem-el::after {
+    content: ''; position: absolute; inset: 0; border-radius: 1px;
+    background: linear-gradient(180deg, var(--ai) 0%, rgba(var(--ai-rgb), 0.35) 100%);
+    transform: scaleY(0); transform-origin: top center;
+    transition: transform 0.3s cubic-bezier(0.22,1,0.36,1);
+    pointer-events: none;
+  }
+  .rainbtn:hover .stem-el::after, .rainbtn:focus-visible .stem-el::after {
+    transform: scaleY(1);
+    transition: transform 0.3s cubic-bezier(0.4,0,1,1);
+  }
+  .droplet { position: absolute; left: 50%; top: -3px; width: 3.5px; height: 3.5px; transform: translateX(-50%); border-radius: 50%; background: var(--ai); animation: drop cubic-bezier(0.4,0,1,1) both; pointer-events: none; z-index: 1; }
+  @keyframes drop { from { top: -3px; } to { top: calc(100% - 3px); } }
+  .splash { position: absolute; left: 50%; bottom: -1px; width: 4px; height: 1.5px; border-radius: 50%; background: var(--ai); animation: splash 0.4s ease-out both; pointer-events: none; z-index: 1; }
+  @keyframes splash { from { transform: translateX(-50%) scaleX(1); opacity: 0.9; } to { transform: translateX(-50%) scaleX(3.2); opacity: 0; } }
+  .tipdot { position: absolute; top: -3px; left: 50%; width: 4.5px; height: 4.5px; border-radius: 50%; background: var(--ai); animation: breatheDot 5s ease-in-out infinite; pointer-events: none; z-index: 1; }
+  .tipdot.hidden { display: none; }
+  .tipdot.reform { animation: beadForm 0.45s ease-out both, breatheDot 5s ease-in-out 0.45s infinite; }
+  @keyframes breatheDot { 0%,100% { transform: translateX(-50%) scale(1); opacity: 1; } 50% { transform: translateX(-50%) scale(1.45); opacity: 0.55; } }
+  @keyframes beadForm { from { transform: translateX(-50%) scale(0); opacity: 0; } to { transform: translateX(-50%) scale(1); opacity: 1; } }
+
+  button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--ai); outline-offset: 3px; border-radius: 8px; }
+  /* the browser's own tap/focus paint (gold on some Android browsers) — ours is the indigo ring above */
+  * { -webkit-tap-highlight-color: transparent; }
+  button:focus:not(:focus-visible), [tabindex]:focus:not(:focus-visible), svg:focus:not(:focus-visible) { outline: none; }
+  .card, .card svg { -webkit-user-select: none; user-select: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card, .draw-path, .fade-late, .stem, .runpt, .run-progress, .breathe-svg,
+    .runpt .mark.today, .pt .mark.today, .march, .droplet, .splash, .plumb,
+    .tipdot, .goal-echo { animation: none !important; opacity: 1; }
+    .draw-path { stroke-dasharray: none; }
+    .goal-echo { opacity: 0 !important; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>measures</h1><span class="label">Without thought</span>
+  </header>
+
+  <div class="grid">
+
+    <!-- RIDGE · deep work -->
+    <div class="card" style="animation-delay:0s">
+      <div class="head"><span class="label">Deep work</span><span class="label">7 days</span></div>
+      <div class="body">
+        <div class="metric-col">
+          <span class="numeral metric-num">24.6<span class="soft"> h this week</span></span>
+          <div>
+            <svg id="ridgeSvg" viewBox="0 0 300 100" style="width:100%" aria-label="Deep work hours over seven days. Tap or focus a day to compare it with the weekly average.">
+              <defs>
+                <linearGradient id="ridgeMist" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" class="s-ai-16"/><stop offset="100%" class="s-ai-0"/>
+                </linearGradient>
+              </defs>
+              <path id="ridgeFill" fill="url(#ridgeMist)" class="fade-late"/>
+              <path id="ridgeLine" fill="none" stroke-width="1.5" stroke-linecap="round" pathLength="1" class="draw-path"/>
+              <line id="pinLine" stroke-width="1" opacity="0"/>
+              <g id="ridgePts"></g>
+            </svg>
+            <div class="hour-row"><span>mon</span><span>sun</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="foot"><span class="caption" id="ridgeCap"></span><span class="label">hours</span></div>
+    </div>
+
+    <!-- RAIN · sessions -->
+    <div class="card" style="animation-delay:0.12s">
+      <div class="head"><span class="label">Sessions</span><span class="label">14 days</span></div>
+      <div class="body">
+        <div class="metric-col">
+          <span class="numeral metric-num">48<span class="soft"> sessions</span></span>
+          <div>
+            <div class="rainrow" id="rainRow"></div>
+            <div class="hour-row"><span id="rainStart"></span><span>today</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="foot"><span class="caption" id="rainCap"></span><span class="label">focus</span></div>
+    </div>
+
+    <!-- NIGHT · sleep -->
+    <div class="card" style="animation-delay:0.24s">
+      <div class="head"><span class="label">Sleep</span><span class="label">Last night</span></div>
+      <div class="body">
+        <div class="metric-col">
+          <span class="numeral metric-num">7<span class="soft"> h </span>32</span>
+          <div>
+            <svg id="nightSvg" viewBox="0 0 300 80" style="width:100%; touch-action:pan-y" tabindex="0" role="slider"
+              aria-label="Sleep depth through the night as a valley. Drag across it, or use arrow keys, to read the time and depth.">
+              <defs>
+                <linearGradient id="nightSky" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" class="s-ai-0"/><stop offset="35%" class="s-ai-10"/>
+                  <stop offset="55%" class="s-ai-10"/><stop offset="100%" class="s-ai-0"/>
+                </linearGradient>
+                <linearGradient id="restFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" class="s-ai-20"/><stop offset="100%" class="s-ai-02"/>
+                </linearGradient>
+              </defs>
+              <rect x="0" y="0" width="300" height="76" rx="6" fill="url(#nightSky)" class="fade-late"/>
+              <line class="horizon" x1="0" y1="14" x2="300" y2="14" stroke-width="1"/>
+              <path class="fade-late" fill="url(#restFill)"
+                d="M 51.6 14 C 70 44, 84 64, 104 64 C 124 64, 130 40, 146 40 C 162 40, 168 60, 186 60 C 208 60, 226 34, 240 14 Z"/>
+              <path id="nightCurve" class="draw-path" fill="none" stroke-width="1.5" stroke-linecap="round" pathLength="1"
+                d="M 51.6 14 C 70 44, 84 64, 104 64 C 124 64, 130 40, 146 40 C 162 40, 168 60, 186 60 C 208 60, 226 34, 240 14"/>
+              <circle class="wakedot breathe-svg" cx="240" cy="14" r="3.5"/>
+              <line id="scrubLine" stroke-width="1" y1="14" y2="76" opacity="0"/>
+              <circle id="scrubDot" r="3" opacity="0"/>
+            </svg>
+            <div class="hour-row"><span>21</span><span>00</span><span>03</span><span>06</span><span>09</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="foot"><span class="caption" id="nightCap"></span><span class="label">restful</span></div>
+    </div>
+
+    <!-- ROAD · running -->
+    <div class="card" style="animation-delay:0.36s">
+      <div class="head"><span class="label">Running</span><span class="label">This week</span></div>
+      <div class="body">
+        <div class="metric-col">
+          <span class="numeral metric-num">18.2<span class="soft"> of 25 km</span></span>
+          <div>
+            <svg id="routeSvg" viewBox="0 0 300 96" style="width:100%" aria-label="18.2 of 25 kilometres run this week, shown as progress along a road. Tap a marker to replay its run; tap the road ahead for the time to finish.">
+              <path id="routeGhost" fill="none" stroke-width="1" stroke-dasharray="2 4" stroke-linecap="round"
+                d="M 8 62 C 50 22, 95 88, 145 50 C 185 22, 215 80, 292 42"/>
+              <path id="tracePath" fill="none" stroke-linecap="round" pathLength="100"
+                d="M 8 62 C 50 22, 95 88, 145 50 C 185 22, 215 80, 292 42"/>
+              <path id="routePath" class="run-progress" fill="none" stroke-width="2" stroke-linecap="round" pathLength="100"
+                d="M 8 62 C 50 22, 95 88, 145 50 C 185 22, 215 80, 292 42"/>
+              <g id="runPts"></g>
+            </svg>
+            <div class="hour-row"><span>0</span><span>25 km</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="foot"><span class="caption" id="distCap"></span><span class="label">4 runs</span></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  var NS = 'http://www.w3.org/2000/svg';
+
+  /* invitations: each caption teaches its gesture once, then summarises */
+  var invited = { ridge: false, rain: false, night: false, road: false };
+
+  var capToken = 0;
+  function setCap(el, text, live){
+    var t = ++capToken;
+    el.style.opacity = 0;
+    setTimeout(function(){
+      if (t !== capToken) return;
+      el.textContent = text; el.classList.toggle('live', !!live); el.style.opacity = 1;
+    }, 140);
+  }
+  function setCapNow(el, text, live){
+    ++capToken;
+    el.style.opacity = 1; el.textContent = text; el.classList.toggle('live', !!live);
+  }
+
+  /* —— RIDGE —— */
+  var rdDays = ['mon','tue','wed','thu','fri','sat','sun'];
+  var rdDaysFull = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+  var rdVals = [2.5,3.8,1.2,4.6,3.1,5.2,4.2];
+  var W=300,H=100,PAD=10,MAX=6, rdSel = null;
+  var avgN = rdVals.reduce(function(a,b){return a+b;},0)/rdVals.length;
+  var pts = rdVals.map(function(v,i){ return [PAD + i*(W-2*PAD)/(rdVals.length-1), H-PAD-(v/MAX)*(H-2*PAD)]; });
+  var d = 'M ' + pts[0][0] + ' ' + pts[0][1];
+  for (var i=1;i<pts.length;i++){
+    var mx=(pts[i-1][0]+pts[i][0])/2;
+    d += ' C '+mx+' '+pts[i-1][1]+', '+mx+' '+pts[i][1]+', '+pts[i][0]+' '+pts[i][1];
+  }
+  document.getElementById('ridgeLine').setAttribute('d', d);
+  document.getElementById('ridgeFill').setAttribute('d', d + ' L '+pts[6][0]+' '+H+' L '+pts[0][0]+' '+H+' Z');
+  var ridgeCap = document.getElementById('ridgeCap'), ptsG = document.getElementById('ridgePts');
+  var pinLine = document.getElementById('pinLine');
+  function ridgeReading(i){
+    var delta = rdVals[i] - avgN;
+    return rdDays[i] + ' — ' + rdVals[i] + ' h · ' + (delta >= 0 ? '+' : '−') + Math.abs(delta).toFixed(1) + ' vs average';
+  }
+  function ridgeDefault(){
+    return invited.ridge ? 'averaging ' + avgN.toFixed(1) + ' h — saturday peaked' : 'tap a day to weigh it';
+  }
+  pts.forEach(function(p,i){
+    var g = document.createElementNS(NS,'g');
+    g.setAttribute('class','pt'); g.setAttribute('tabindex','0'); g.setAttribute('role','button');
+    g.setAttribute('aria-label', rdDaysFull[i] + ', ' + rdVals[i] + ' hours');
+    var hit = document.createElementNS(NS,'circle');
+    hit.setAttribute('cx',p[0]); hit.setAttribute('cy',p[1]); hit.setAttribute('r',14); hit.setAttribute('fill','transparent');
+    var c = document.createElementNS(NS,'circle');
+    c.setAttribute('cx',p[0]); c.setAttribute('cy',p[1]); c.setAttribute('class','mark');
+    g.appendChild(hit); g.appendChild(c); ptsG.appendChild(g);
+    g.addEventListener('click', function(){ invited.ridge = true; rdSel = (rdSel===i) ? null : i; ridgeRender(); });
+    g.addEventListener('keydown', function(e){
+      if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); g.click(); }
+      if (e.key === 'ArrowRight' && ptsG.children[i+1]) ptsG.children[i+1].focus();
+      if (e.key === 'ArrowLeft' && ptsG.children[i-1]) ptsG.children[i-1].focus();
+    });
+    g.addEventListener('mouseenter', function(){ setCapNow(ridgeCap, ridgeReading(i), true); });
+    g.addEventListener('mouseleave', function(){ ridgeCaption(); });
+  });
+  function ridgeCaption(){
+    if (rdSel === null) setCap(ridgeCap, ridgeDefault(), false);
+    else setCap(ridgeCap, ridgeReading(rdSel), true);
+  }
+  function ridgeRender(){
+    Array.prototype.forEach.call(ptsG.children, function(g,i){
+      var c = g.querySelector('.mark');
+      c.setAttribute('r', rdSel===i ? 4 : i===6 ? 3.5 : 2.5);
+      c.classList.toggle('hot', rdSel===i || i===6);
+      c.classList.toggle('today', i===6 && rdSel===null);
+    });
+    if (rdSel === null){
+      pinLine.setAttribute('opacity', 0);
+    } else {
+      var p = pts[rdSel];
+      pinLine.setAttribute('x1', p[0]); pinLine.setAttribute('x2', p[0]);
+      pinLine.setAttribute('y1', p[1] + 6); pinLine.setAttribute('y2', H - 2);
+      pinLine.setAttribute('opacity', 1);
+      pinLine.style.transformBox = 'view-box';
+      pinLine.style.transformOrigin = p[0] + 'px ' + (p[1] + 6) + 'px';
+      pinLine.classList.remove('plumb'); void pinLine.getBoundingClientRect(); pinLine.classList.add('plumb');
+    }
+    ridgeCaption();
+  }
+  ridgeRender();
+
+  /* —— RAIN —— */
+  var rnVals = [3,5,2,0,4,6,3,1,4,5,2,6,3,4], rnSel = null, rnMax = 6;
+  var row = document.getElementById('rainRow'), rainCap = document.getElementById('rainCap');
+  function rnDay(i){
+    var dt = new Date(); dt.setDate(dt.getDate() - (rnVals.length-1-i));
+    return dt.toLocaleDateString('en-CA',{weekday:'short',day:'numeric'}).toLowerCase();
+  }
+  document.getElementById('rainStart').textContent = rnDay(0);
+  function rainDefault(){
+    return invited.rain ? '3.4 a day — a steady fortnight' : 'tap a stem to read its day';
+  }
+  var tipEl = null;
+  rnVals.forEach(function(v,i){
+    var b = document.createElement('button'); b.className='rainbtn';
+    b.setAttribute('aria-label', rnDay(i)+', '+v+' sessions');
+    var s = document.createElement('div'); s.className='stem stem-el';
+    s.style.height = Math.max(v/rnMax*100, 3)+'%';
+    s.style.animationDelay = (i*0.05)+'s';
+    b.appendChild(s); row.appendChild(b);
+    b.addEventListener('click', function(){
+      invited.rain = true;
+      rnSel = (rnSel===i)?null:i;
+      if (rnSel===i && v > 0){
+        var drop = document.createElement('span'); drop.className='droplet';
+        var hPx = s.getBoundingClientRect().height;
+        var dur = 0.22 + Math.sqrt(hPx / 92) * 0.30;
+        drop.style.animationDuration = dur.toFixed(2) + 's';
+        var isToday = (i === rnVals.length - 1);
+        if (isToday && tipEl){ tipEl.classList.remove('reform'); tipEl.classList.add('hidden'); }
+        s.appendChild(drop);
+        setTimeout(function(){
+          drop.remove();
+          var sp = document.createElement('span'); sp.className='splash';
+          s.appendChild(sp);
+          setTimeout(function(){ sp.remove(); }, 450);
+          if (isToday && tipEl){
+            setTimeout(function(){
+              tipEl.classList.remove('hidden');
+              tipEl.classList.add('reform');
+            }, 700);
+          }
+        }, dur * 1000);
+      }
+      rainRender();
+    });
+  });
+  function rainRender(){
+    Array.prototype.forEach.call(row.children, function(b,i){
+      b.firstChild.classList.toggle('on', rnSel===i || (rnSel===null && i===rnVals.length-1));
+    });
+    if (rnSel===null){ setCap(rainCap, rainDefault(), false); }
+    else { setCap(rainCap, rnDay(rnSel) + ' — ' + rnVals[rnSel] + ' session' + (rnVals[rnSel]===1?'':'s'), true); }
+  }
+  rainRender();
+  (function(){
+    var lastStem = row.children[rnVals.length - 1].firstChild;
+    tipEl = document.createElement('span'); tipEl.className = 'tipdot';
+    lastStem.appendChild(tipEl);
+  })();
+
+  /* —— NIGHT —— */
+  var nightSvg = document.getElementById('nightSvg');
+  var curve = document.getElementById('nightCurve');
+  var scrubLine = document.getElementById('scrubLine'), scrubDot = document.getElementById('scrubDot');
+  var nightCap = document.getElementById('nightCap');
+  function nightDefault(){
+    return invited.night ? 'asleep 23:04 — awake 6:36' : 'press and wander the night';
+  }
+  var samples = [];
+  (function(){
+    var L = curve.getTotalLength();
+    for (var i=0; i<=140; i++) samples.push(curve.getPointAtLength(L*i/140));
+  })();
+  function nightTime(x){
+    var mins = Math.round(21*60 + (x/300)*720) % 1440;
+    var h = Math.floor(mins/60), m = mins % 60;
+    return h + ':' + String(m).padStart(2,'0');
+  }
+  function depthWord(y){
+    if (y >= 55) return 'deep';
+    if (y >= 30) return 'light';
+    return 'drifting';
+  }
+  function scrubAt(x){
+    invited.night = true;
+    if (x < 51.6 || x > 240){
+      var cx = Math.max(4, Math.min(296, x));
+      scrubLine.setAttribute('opacity', 0);
+      scrubDot.setAttribute('cx', cx); scrubDot.setAttribute('cy', 14);
+      scrubDot.setAttribute('opacity', 1);
+      setCapNow(nightCap, nightTime(cx) + ' — awake', true);
+      return;
+    }
+    var best = samples[0];
+    for (var i=1;i<samples.length;i++) if (Math.abs(samples[i].x - x) < Math.abs(best.x - x)) best = samples[i];
+    scrubLine.setAttribute('x1', best.x); scrubLine.setAttribute('x2', best.x);
+    scrubLine.setAttribute('opacity', 1);
+    scrubDot.setAttribute('cx', best.x); scrubDot.setAttribute('cy', best.y);
+    scrubDot.setAttribute('opacity', 1);
+    setCapNow(nightCap, nightTime(best.x) + ' — ' + depthWord(best.y) + ' sleep', true);
+  }
+  function scrubEnd(){
+    kbX = null;
+    scrubLine.setAttribute('opacity', 0); scrubDot.setAttribute('opacity', 0);
+    setCap(nightCap, nightDefault(), false);
+  }
+  nightSvg.addEventListener('pointerdown', function(e){
+    nightSvg.setPointerCapture(e.pointerId);
+    scrubAt((e.clientX - nightSvg.getBoundingClientRect().left) / nightSvg.getBoundingClientRect().width * 300);
+  });
+  nightSvg.addEventListener('pointermove', function(e){
+    if (e.pressure > 0 || e.buttons > 0 || e.pointerType === 'mouse'){
+      var r = nightSvg.getBoundingClientRect();
+      scrubAt((e.clientX - r.left) / r.width * 300);
+    }
+  });
+  nightSvg.addEventListener('pointerup', scrubEnd);
+  nightSvg.addEventListener('pointerleave', scrubEnd);
+  var kbX = null;
+  nightSvg.addEventListener('keydown', function(e){
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft'){
+      e.preventDefault();
+      kbX = Math.max(4, Math.min(296, (kbX === null ? 146 : kbX) + (e.key === 'ArrowRight' ? 6 : -6)));
+      scrubAt(kbX);
+    }
+    if (e.key === 'Escape') scrubEnd();
+  });
+  nightSvg.addEventListener('blur', scrubEnd);
+  setCapNow(nightCap, nightDefault(), false);
+
+  /* —— ROAD —— */
+  var runs = [
+    { day: 'mon', km: 4.8 },
+    { day: 'wed', km: 6.1 },
+    { day: 'thu', km: 5.2 },
+    { day: 'sat', km: 2.1 }
+  ];
+  var GOAL = 25, PACE_MIN_PER_KM = 5.8, dSel = null;
+  var ghost = document.getElementById('routeGhost');
+  var trace = document.getElementById('tracePath');
+  var ptsHost = document.getElementById('runPts');
+  var distCap = document.getElementById('distCap');
+  var ran = runs.reduce(function(a,r){ return a + r.km; }, 0);
+  var L2 = ghost.getTotalLength();
+
+  function roadReading(i){ return runs[i].day + ' — ' + runs[i].km + ' km'; }
+  function roadDefault(){
+    return invited.road ? (GOAL - ran).toFixed(1) + ' km left — one long run closes it' : 'tap a footfall to replay its run';
+  }
+  function roadCaption(){
+    if (dSel === null) setCap(distCap, roadDefault(), false);
+    else setCap(distCap, roadReading(dSel), true);
+  }
+
+  function svgDot(len, cls){
+    var p = ghost.getPointAtLength(len);
+    var c = document.createElementNS(NS, 'circle');
+    c.setAttribute('cx', p.x); c.setAttribute('cy', p.y);
+    if (cls) c.setAttribute('class', cls);
+    return c;
+  }
+  var startDot = svgDot(0, 'start-dot'); startDot.setAttribute('r', 2);
+  ptsHost.appendChild(startDot);
+  var goal = svgDot(L2, 'goal-ring'); goal.setAttribute('r', 4);
+  var echo = svgDot(L2, 'goal-echo'); echo.setAttribute('r', 4);
+  var goalHit = svgDot(L2, null); goalHit.setAttribute('r', 14); goalHit.setAttribute('fill', 'transparent');
+  goalHit.style.cursor = 'pointer';
+  ptsHost.appendChild(goal); ptsHost.appendChild(echo); ptsHost.appendChild(goalHit);
+
+  function roadAhead(){
+    invited.road = true;
+    stopRunner(); dSel = null;
+    ghost.classList.remove('march'); void ghost.getBoundingClientRect();
+    ghost.classList.add('march');
+    var leftKm = GOAL - ran, mins = Math.round(leftKm * PACE_MIN_PER_KM);
+    setCap(distCap, leftKm.toFixed(1) + ' km — about ' + mins + ' min at your pace', true);
+    distRenderMarks();
+  }
+  goalHit.addEventListener('click', roadAhead);
+  ghost.addEventListener('click', roadAhead);
+  ghost.style.cursor = 'pointer';
+  ghost.style.pointerEvents = 'stroke';
+
+  var cum = 0, runBounds = [], arrived = false, runToken = 0;
+  runs.forEach(function(r, i){
+    var fromLen = cum / GOAL * L2;
+    cum += r.km;
+    var toLen = cum / GOAL * L2;
+    runBounds.push([fromLen, toLen]);
+    var p = ghost.getPointAtLength(toLen);
+    var g = document.createElementNS(NS, 'g');
+    g.setAttribute('class', 'runpt'); g.setAttribute('tabindex', '0'); g.setAttribute('role', 'button');
+    g.setAttribute('aria-label', r.day + ', ' + r.km + ' kilometres');
+    g.style.animationDelay = (0.3 + 1.6 * (cum / ran) * 0.9) + 's';
+    var hit = document.createElementNS(NS, 'circle');
+    hit.setAttribute('cx', p.x); hit.setAttribute('cy', p.y);
+    hit.setAttribute('r', 13); hit.setAttribute('fill', 'transparent');
+    var mark = document.createElementNS(NS, 'circle');
+    mark.setAttribute('cx', p.x); mark.setAttribute('cy', p.y);
+    mark.setAttribute('class', 'mark');
+    g.appendChild(hit); g.appendChild(mark); ptsHost.appendChild(g);
+    g.addEventListener('click', function(ev){
+      ev.stopPropagation();
+      invited.road = true;
+      if (dSel === i){ dSel = null; stopRunner(); distRender(); return; }
+      dSel = i; arrived = false;
+      distRender();
+      traverse(i, function(){
+        arrived = true;
+        var marks = ptsHost.querySelectorAll('.runpt .mark');
+        if (marks[i] && dSel === i) marks[i].setAttribute('r', 5);
+      });
+    });
+    g.addEventListener('keydown', function(e){
+      if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); g.dispatchEvent(new MouseEvent('click', {bubbles:false})); }
+    });
+    g.addEventListener('mouseenter', function(){ setCapNow(distCap, roadReading(i), true); });
+    g.addEventListener('mouseleave', function(){ roadCaption(); });
+  });
+
+  /* the runner replays a run; its wake stays bright a moment, then fades */
+  var runner = document.createElementNS(NS, 'circle');
+  runner.setAttribute('r', 3); runner.setAttribute('class', 'runner');
+  runner.setAttribute('opacity', 0);
+  ptsHost.appendChild(runner);
+  function stopRunner(){
+    ++runToken; runner.setAttribute('opacity', 0);
+    trace.style.transition = 'opacity 0.4s ease'; trace.style.opacity = 0;
+  }
+  function traverse(i, done){
+    var t0 = ++runToken;
+    var from = runBounds[i][0], to = runBounds[i][1];
+    var a = from / L2 * 100;
+    if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches){ done(); return; }
+    var dur = 400 + runs[i].km / GOAL * 2500;
+    runner.setAttribute('opacity', 1);
+    trace.style.transition = 'none'; trace.style.opacity = 1;
+    trace.setAttribute('stroke-dashoffset', -a);
+    var start = null;
+    function step(ts){
+      if (t0 !== runToken) return;
+      if (start === null) start = ts;
+      var u = Math.min((ts - start) / dur, 1);
+      var e = u < 0.5 ? 2*u*u : 1 - Math.pow(-2*u + 2, 2) / 2;
+      var len = from + (to - from) * e;
+      var p = ghost.getPointAtLength(len);
+      runner.setAttribute('cx', p.x); runner.setAttribute('cy', p.y);
+      trace.setAttribute('stroke-dasharray', (len / L2 * 100 - a) + ' 100');
+      if (u < 1) requestAnimationFrame(step);
+      else {
+        runner.setAttribute('opacity', 0);
+        requestAnimationFrame(function(){
+          trace.style.transition = 'opacity 1.2s ease';
+          trace.style.opacity = 0;
+        });
+        done();
+      }
+    }
+    requestAnimationFrame(step);
+  }
+
+  function distRenderMarks(){
+    var marks = ptsHost.querySelectorAll('.runpt .mark');
+    Array.prototype.forEach.call(marks, function(m, i){
+      m.setAttribute('r', dSel === i ? (arrived ? 5 : 3.5) : 3);
+      m.classList.toggle('today', i === runs.length - 1 && dSel === null);
+    });
+  }
+  function distRender(){
+    distRenderMarks();
+    roadCaption();
+  }
+  distRender();
+})();
+</script>
+</body>
+</html>
