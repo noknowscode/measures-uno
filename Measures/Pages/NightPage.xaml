@@ -1,0 +1,65 @@
+<Page
+    x:Class="Measures.Pages.NightPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:charts="using:Measures.Charts"
+    xmlns:controls="using:Measures.Controls"
+    xmlns:pages="using:Measures.Pages"
+    Background="{StaticResource PageBrush}">
+
+    <Grid x:Name="Root" IsTabStop="True" UseSystemFocusVisuals="False">
+
+        <VisualStateManager.VisualStateGroups>
+            <VisualStateGroup>
+                <VisualState x:Name="Narrow" />
+                <VisualState x:Name="Wide">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="620" />
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="Pad.Padding" Value="56" />
+                    </VisualState.Setters>
+                </VisualState>
+            </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
+
+        <!--
+          The field is the page ground: first child, behind everything, and it
+          never takes input of its own - it reads the pointer off the window
+          root, so it still bends under the card sitting on top of it.
+        -->
+        <controls:GlyphFieldBackground x:Name="Field" />
+
+        <ScrollViewer
+            x:Name="Scroll"
+            HorizontalScrollMode="Disabled"
+            IsTabStop="False"
+            VerticalScrollBarVisibility="Auto">
+
+            <Grid x:Name="Pad" Padding="20">
+                <Grid MaxWidth="680" HorizontalAlignment="Stretch">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <pages:InstrumentNav
+                        Margin="0,0,0,28"
+                        Current="Night"
+                        ReplayRequested="OnReplay" />
+
+                    <controls:MeasureCard
+                        x:Name="Card"
+                        Grid.Row="1"
+                        VerticalAlignment="Top"
+                        AxisLabels="21, 00, 03, 06, 09"
+                        FootRight="restful"
+                        HeadLeft="Sleep"
+                        HeadRight="Last night">
+                        <charts:NightChart x:Name="Chart" />
+                    </controls:MeasureCard>
+                </Grid>
+            </Grid>
+        </ScrollViewer>
+    </Grid>
+</Page>
