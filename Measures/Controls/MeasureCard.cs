@@ -10,8 +10,11 @@ namespace Measures.Controls;
 /// charts only ever draw their plot: numeral tops and chart bottoms are the two
 /// horizontals shared across the bench, and they line up because this control
 /// decides them, not the charts.
+///
+/// It is also the thing the page is arranged around - pick it up by its chrome
+/// and move it, and the glyph field behind parts to make room.
 /// </summary>
-public sealed partial class MeasureCard : ContentControl
+public sealed partial class MeasureCard : ContentControl, IFieldSource
 {
     public static readonly DependencyProperty HeadLeftProperty = DependencyProperty.Register(
         nameof(HeadLeft), typeof(string), typeof(MeasureCard), new PropertyMetadata(string.Empty));
@@ -39,6 +42,16 @@ public sealed partial class MeasureCard : ContentControl
         nameof(RiseDelay), typeof(double), typeof(MeasureCard), new PropertyMetadata(0d));
 
     readonly TranslateTransform _rise = new();
+    readonly TranslateTransform _drag = new();
+
+    Pointer? _held;
+    UIElement? _space;
+    Point _grab;
+    double _grabX;
+    double _grabY;
+    double _flingX;
+    double _flingY;
+    DispatcherTimer? _coast;
 
     FrameworkElement? _riseHost;
     TextBlock? _numeral;
@@ -51,9 +64,24 @@ public sealed partial class MeasureCard : ContentControl
     {
         DefaultStyleKey = typeof(MeasureCard);
 
+        RenderTransform = _drag;
+
+        // plain handlers, so an instrument that has already claimed the press
+        // for a pin or a scrub keeps it - the card is picked up by its chrome
+        PointerPressed += OnDragStart;
+        PointerMoved += OnDragMove;
+        PointerReleased += OnDragEnd;
+        PointerCaptureLost += OnDragEnd;
+
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
     }
+
+    /// <inheritdoc />
+    public event EventHandler? Moved;
+
+    /// <inheritdoc />
+    public event EventHandler? Released;
 
     public string HeadLeft
     {
@@ -108,6 +136,16 @@ public sealed partial class MeasureCard : ContentControl
 
     /// <summary>Line box for the axis row, at the 8.5 epx whisper size.</summary>
     const double AxisHeight = 12;
+
+    /// <summary>How much of the card must stay on screen, however hard it is thrown.</summary>
+    const double EdgeKeep = 96;
+
+    /// <summary>
+    /// Momentum bleed per 60 fps frame after the hand lets go. At 0.92 a throw
+    /// coasts about twelve times its last frame of travel and is still inside
+    /// 600 ms - weight, without the card sailing away.
+    /// </summary>
+    const double CoastDamp = 0.92;
 
     protected override void OnApplyTemplate()
     {
@@ -223,6 +261,8 @@ public sealed partial class MeasureCard : ContentControl
 
     void OnUnloaded(object sender, RoutedEventArgs e)
     {
+        StopCoast();
+
         if (_source is not null)
         {
             _source.ReadingChanged -= OnReadingChanged;
@@ -320,5 +360,201 @@ public sealed partial class MeasureCard : ContentControl
 
             Canvas.SetLeft(label, fraction * width - label.DesiredSize.Width * fraction);
         }
+    }
+
+    /// <summary>
+    /// The card is picked up by its chrome. A press that started inside the
+    /// instrument belongs to the instrument - a pin, a bead, a scrub - so the
+    /// plot is never a drag handle, whether or not the chart marked it handled.
+    /// </summary>
+    void OnDragStart(object sender, PointerRoutedEventArgs e)
+    {
+        if (_held is not null || !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            return;
+        }
+
+        if (Content is DependencyObject instrument && StartedInside(e.OriginalSource, instrument))
+        {
+            return;
+        }
+
+        StopCoast();
+
+        if (!CapturePointer(e.Pointer))
+        {
+            return;
+        }
+
+        _held = e.Pointer;
+
+        // Measured against the window root, which is the one element that
+        // neither this card nor the pointer can move. Passing null here reads
+        // as the sender's own space on Uno, and the sender changes to whichever
+        // child is under the pointer mid-drag, which throws the card across the
+        // page. Never null.
+        _space = Space;
+        _grab = e.GetCurrentPoint(_space).Position;
+        _grabX = _drag.X;
+        _grabY = _drag.Y;
+        _flingX = 0;
+        _flingY = 0;
+
+        e.Handled = true;
+    }
+
+    void OnDragMove(object sender, PointerRoutedEventArgs e)
+    {
+        if (_held is null || e.Pointer.PointerId != _held.PointerId)
+        {
+            return;
+        }
+
+        var now = e.GetCurrentPoint(_space).Position;
+        var x = _grabX + (now.X - _grab.X);
+        var y = _grabY + (now.Y - _grab.Y);
+
+        Clamp(ref x, ref y);
+
+        MoveTo(x, y);
+
+        e.Handled = true;
+    }
+
+    void OnDragEnd(object sender, PointerRoutedEventArgs e)
+    {
+        if (_held is null)
+        {
+            return;
+        }
+
+        var pointer = _held;
+        _held = null;
+        _space = null;
+
+        ReleasePointerCapture(pointer);
+        StartCoast();
+
+        Released?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>Direct manipulation is 1:1 and unsmoothed; the lag lives in the field, not the hand.</summary>
+    void MoveTo(double x, double y)
+    {
+        _flingX = x - _drag.X;
+        _flingY = y - _drag.Y;
+
+        _drag.X = x;
+        _drag.Y = y;
+
+        Moved?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Momentum: the card keeps going after the hand stops, and coasts to rest.
+    /// A fixed-duration slide would land on the same spot every time no matter
+    /// how hard it was thrown, which is the tell of a fake drag.
+    /// </summary>
+    void StartCoast()
+    {
+        if (!Anim.Enabled || (Math.Abs(_flingX) < 0.6 && Math.Abs(_flingY) < 0.6))
+        {
+            _flingX = 0;
+            _flingY = 0;
+            return;
+        }
+
+        _coast = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+        _coast.Tick += OnCoast;
+        _coast.Start();
+    }
+
+    void OnCoast(object? sender, object e)
+    {
+        _flingX *= CoastDamp;
+        _flingY *= CoastDamp;
+
+        var x = _drag.X + _flingX;
+        var y = _drag.Y + _flingY;
+        var wantX = x;
+        var wantY = y;
+
+        Clamp(ref x, ref y);
+
+        // an edge absorbs the throw rather than bouncing it
+        if (Math.Abs(x - wantX) > 0.001)
+        {
+            _flingX = 0;
+        }
+
+        if (Math.Abs(y - wantY) > 0.001)
+        {
+            _flingY = 0;
+        }
+
+        MoveTo(x, y);
+
+        if (Math.Abs(_flingX) < 0.1 && Math.Abs(_flingY) < 0.1)
+        {
+            StopCoast();
+        }
+    }
+
+    void StopCoast()
+    {
+        if (_coast is null)
+        {
+            return;
+        }
+
+        _coast.Stop();
+        _coast.Tick -= OnCoast;
+        _coast = null;
+        _flingX = 0;
+        _flingY = 0;
+    }
+
+    /// <summary>Keeps a grabbable edge of the card on screen at every offset.</summary>
+    void Clamp(ref double x, ref double y)
+    {
+        if (XamlRoot is not { } root || Space is not { } space || ActualWidth <= 0)
+        {
+            return;
+        }
+
+        // where the card would sit with no drag applied
+        var origin = TransformToVisual(space).TransformPoint(new Point(0, 0));
+        var homeX = origin.X - _drag.X;
+        var homeY = origin.Y - _drag.Y;
+
+        x = Math.Clamp(x, EdgeKeep - ActualWidth - homeX, root.Size.Width - EdgeKeep - homeX);
+        y = Math.Clamp(y, EdgeKeep - ActualHeight - homeY, root.Size.Height - EdgeKeep - homeY);
+    }
+
+    /// <summary>
+    /// The card's own parent: the one element every drag measurement can be
+    /// taken against safely. A RenderTransform on this card cannot move its
+    /// parent, so the reference frame holds still while the card travels.
+    /// Passing null instead reads as the sender's space on Uno, and the sender
+    /// changes to whichever child is under the pointer, which throws the card
+    /// across the page.
+    /// </summary>
+    UIElement? Space => VisualTreeHelper.GetParent(this) as UIElement;
+
+    static bool StartedInside(object? source, DependencyObject subtree)
+    {
+        var node = source as DependencyObject;
+
+        while (node is not null)
+        {
+            if (node == subtree)
+            {
+                return true;
+            }
+
+            node = VisualTreeHelper.GetParent(node);
+        }
+
+        return false;
     }
 }

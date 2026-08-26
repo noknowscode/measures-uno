@@ -2,7 +2,8 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:Measures.Controls"
-    xmlns:charts="using:Measures.Charts">
+    xmlns:charts="using:Measures.Charts"
+    xmlns:pages="using:Measures.Pages">
 
 
 
@@ -431,6 +432,118 @@
                                 </Grid>
                             </Grid>
                         </Border>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ══ instrument nav ══ -->
+
+    <!--
+      A name in the masthead, not a control: no chrome at all, so the four
+      instruments read as a line of type. Hover and the current mark are the
+      only feedback, and both are carried by colour.
+    -->
+    <Style x:Key="NavLinkStyle" TargetType="Button">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="VerticalAlignment" Value="Bottom" />
+        <Setter Property="UseSystemFocusVisuals" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid x:Name="Root" Background="Transparent">
+                        <ContentPresenter
+                            x:Name="Label"
+                            HorizontalAlignment="Left"
+                            RenderTransformOrigin="0.5,0.5">
+                            <ContentPresenter.RenderTransform>
+                                <ScaleTransform x:Name="Press" />
+                            </ContentPresenter.RenderTransform>
+                        </ContentPresenter>
+                        <Rectangle
+                            x:Name="FocusRing"
+                            Margin="-6,-4"
+                            IsHitTestVisible="False"
+                            Opacity="0"
+                            RadiusX="4"
+                            RadiusY="4"
+                            Stroke="{StaticResource AiBrush}"
+                            StrokeThickness="2" />
+
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal" />
+                                <VisualState x:Name="PointerOver" />
+                                <VisualState x:Name="Pressed">
+                                    <VisualState.Setters>
+                                        <!-- 0.98 is the house press for XAML -->
+                                        <Setter Target="Press.ScaleX" Value="0.98" />
+                                        <Setter Target="Press.ScaleY" Value="0.98" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Disabled" />
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="FocusStates">
+                                <VisualState x:Name="Unfocused" />
+                                <VisualState x:Name="PointerFocused" />
+                                <VisualState x:Name="Focused">
+                                    <VisualState.Setters>
+                                        <Setter Target="FocusRing.Opacity" Value="1" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="pages:InstrumentNav">
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="pages:InstrumentNav">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <TextBlock
+                            VerticalAlignment="Bottom"
+                            FontFamily="{StaticResource SerifItalicFont}"
+                            FontSize="{StaticResource TitleSize}"
+                            FontStyle="Italic"
+                            Foreground="{StaticResource InkBrush}"
+                            Text="measures" />
+
+                        <!-- replays every entrance, for showing the page cold -->
+                        <Button
+                            x:Name="PART_Replay"
+                            Grid.Column="1"
+                            VerticalAlignment="Bottom"
+                            AutomationProperties.Name="Replay the entrance"
+                            Style="{StaticResource QuietButtonStyle}">
+                            <controls:SpacedText Style="{StaticResource LabelStyle}" Text="Replay" />
+                        </Button>
+
+                        <!-- the bench, flattened into a line of names -->
+                        <StackPanel
+                            x:Name="PART_Items"
+                            Grid.Row="1"
+                            Grid.ColumnSpan="2"
+                            Margin="0,20,0,0"
+                            Orientation="Horizontal"
+                            Spacing="24" />
                     </Grid>
                 </ControlTemplate>
             </Setter.Value>

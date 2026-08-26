@@ -1,5 +1,6 @@
 using System;
 using Microsoft.Extensions.Logging;
+using Measures.Pages;
 using Measures.Theming;
 using Uno.Resizetizer;
 
@@ -44,7 +45,7 @@ public partial class App : Application
             // When the navigation stack isn't restored navigate to the first page,
             // configuring the new page by passing required information as a navigation
             // parameter
-            rootFrame.Navigate(typeof(MeasuresPage), args.Arguments);
+            rootFrame.Navigate(typeof(RidgePage), args.Arguments);
         }
 
         // Custom token keys resolve unreliably inside ThemeDictionaries, so the
