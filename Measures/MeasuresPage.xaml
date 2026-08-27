@@ -123,10 +123,15 @@
                   moved in here from the bench by the page when the width
                   crosses the breakpoint, so both layouts share one set.
                 -->
+                <!--
+                  The FlipView takes the whole row and each item centres its
+                  card: a FlipView sized to its content measures the card once,
+                  before the plot has taken its height, and clips the foot.
+                -->
                 <FlipView
                     x:Name="Carousel"
                     Grid.Row="2"
-                    VerticalAlignment="Center"
+                    VerticalAlignment="Stretch"
                     Background="Transparent"
                     IsTabStop="False"
                     SelectionChanged="OnCarouselChanged">
@@ -135,7 +140,7 @@
                             <Setter Property="Background" Value="Transparent" />
                             <Setter Property="Padding" Value="0" />
                             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                            <Setter Property="VerticalContentAlignment" Value="Top" />
+                            <Setter Property="VerticalContentAlignment" Value="Center" />
                         </Style>
                     </FlipView.ItemContainerStyle>
                 </FlipView>
