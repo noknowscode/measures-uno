@@ -10,34 +10,61 @@
 
     <VisualStateManager.VisualStateGroups>
         <VisualStateGroup>
-            <!-- single column below 620: the cards read as a list -->
+            <!--
+              One card at a time on every width. Three rooms for it:
+              narrow keeps a compact head and pips; medium earns the tagline and
+              more field; wide swaps the pips for an index rail at the left that
+              names the four instruments and turns the carousel.
+            -->
             <VisualState x:Name="Narrow" />
 
-            <VisualState x:Name="Wide">
+            <VisualState x:Name="Medium">
                 <VisualState.StateTriggers>
                     <AdaptiveTrigger MinWindowWidth="620" />
                 </VisualState.StateTriggers>
                 <VisualState.Setters>
                     <Setter Target="Pad.Padding" Value="56" />
-                    <Setter Target="Bench.Visibility" Value="Visible" />
-                    <Setter Target="Carousel.Visibility" Value="Collapsed" />
+                    <Setter Target="Tagline.Visibility" Value="Visible" />
+
+                    <Setter Target="RidgeTile.(Grid.Row)" Value="0" />
+                    <Setter Target="RidgeTile.(Grid.Column)" Value="0" />
+                    <Setter Target="RidgeTile.(Grid.ColumnSpan)" Value="1" />
+                    <Setter Target="SessionsTile.(Grid.Row)" Value="0" />
+                    <Setter Target="SessionsTile.(Grid.Column)" Value="1" />
+                    <Setter Target="SessionsTile.(Grid.ColumnSpan)" Value="1" />
+                    <Setter Target="NightTile.(Grid.Row)" Value="1" />
+                    <Setter Target="NightTile.(Grid.Column)" Value="0" />
+                    <Setter Target="NightTile.(Grid.ColumnSpan)" Value="1" />
+                    <Setter Target="RoadTile.(Grid.Row)" Value="1" />
+                    <Setter Target="RoadTile.(Grid.Column)" Value="1" />
+                    <Setter Target="RoadTile.(Grid.ColumnSpan)" Value="1" />
+                </VisualState.Setters>
+            </VisualState>
+
+            <VisualState x:Name="Wide">
+                <VisualState.StateTriggers>
+                    <AdaptiveTrigger MinWindowWidth="1100" />
+                </VisualState.StateTriggers>
+                <VisualState.Setters>
+                    <Setter Target="Pad.Padding" Value="56" />
+                    <Setter Target="Tagline.Visibility" Value="Visible" />
                     <Setter Target="Pips.Visibility" Value="Collapsed" />
+                    <Setter Target="Index.Visibility" Value="Visible" />
+                    <Setter Target="IndexColumn.Width" Value="220" />
+                    <Setter Target="Carousel.(Grid.Column)" Value="1" />
 
-                    <Setter Target="RidgeCard.(Grid.Row)" Value="0" />
-                    <Setter Target="RidgeCard.(Grid.Column)" Value="0" />
-                    <Setter Target="RidgeCard.(Grid.ColumnSpan)" Value="1" />
-
-                    <Setter Target="SessionsCard.(Grid.Row)" Value="0" />
-                    <Setter Target="SessionsCard.(Grid.Column)" Value="1" />
-                    <Setter Target="SessionsCard.(Grid.ColumnSpan)" Value="1" />
-
-                    <Setter Target="NightCard.(Grid.Row)" Value="1" />
-                    <Setter Target="NightCard.(Grid.Column)" Value="0" />
-                    <Setter Target="NightCard.(Grid.ColumnSpan)" Value="1" />
-
-                    <Setter Target="RoadCard.(Grid.Row)" Value="1" />
-                    <Setter Target="RoadCard.(Grid.Column)" Value="1" />
-                    <Setter Target="RoadCard.(Grid.ColumnSpan)" Value="1" />
+                    <Setter Target="RidgeTile.(Grid.Row)" Value="0" />
+                    <Setter Target="RidgeTile.(Grid.Column)" Value="0" />
+                    <Setter Target="RidgeTile.(Grid.ColumnSpan)" Value="1" />
+                    <Setter Target="SessionsTile.(Grid.Row)" Value="0" />
+                    <Setter Target="SessionsTile.(Grid.Column)" Value="1" />
+                    <Setter Target="SessionsTile.(Grid.ColumnSpan)" Value="1" />
+                    <Setter Target="NightTile.(Grid.Row)" Value="1" />
+                    <Setter Target="NightTile.(Grid.Column)" Value="0" />
+                    <Setter Target="NightTile.(Grid.ColumnSpan)" Value="1" />
+                    <Setter Target="RoadTile.(Grid.Row)" Value="1" />
+                    <Setter Target="RoadTile.(Grid.Column)" Value="1" />
+                    <Setter Target="RoadTile.(Grid.ColumnSpan)" Value="1" />
                 </VisualState.Setters>
             </VisualState>
         </VisualStateGroup>
@@ -50,21 +77,27 @@
         x:Name="Scroll"
         HorizontalScrollMode="Disabled"
         IsTabStop="False"
-        VerticalScrollBarVisibility="Auto">
+        VerticalScrollBarVisibility="Disabled"
+        VerticalScrollMode="Disabled">
 
         <Grid x:Name="Pad" Padding="20">
             <Grid
                 x:Name="Wrap"
-                MaxWidth="856"
+                MaxWidth="1040"
                 HorizontalAlignment="Stretch">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <!-- the index rail; zero until the wide room opens it -->
+                    <ColumnDefinition x:Name="IndexColumn" Width="0" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
 
                 <!-- ══ header ══ -->
-                <Grid Margin="0,0,0,28" VerticalAlignment="Bottom">
+                <Grid Grid.ColumnSpan="2" Margin="0,0,0,28" VerticalAlignment="Bottom">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
@@ -82,9 +115,11 @@
                         Orientation="Horizontal"
                         Spacing="16">
                         <controls:SpacedText
+                            x:Name="Tagline"
                             VerticalAlignment="Bottom"
                             Style="{StaticResource LabelStyle}"
-                            Text="Without thought" />
+                            Text="Without thought"
+                            Visibility="Collapsed" />
                         <!-- the scheme, in the reader's hand rather than only the system's -->
                         <Button
                             x:Name="ThemeButton"
@@ -106,31 +141,49 @@
 
                 <!--
                   ══ the pips ══
-                  Narrow only: which room the reader is in. Contrast, not hue -
+                  Which room the reader is in. Contrast, not hue -
                   the current one is charcoal, the rest are 35% ink.
                 -->
                 <StackPanel
                     x:Name="Pips"
                     Grid.Row="1"
-                    Margin="0,-12,0,20"
+                    Grid.ColumnSpan="2"
+                    Margin="0,-22,0,10"
                     HorizontalAlignment="Center"
                     Orientation="Horizontal"
-                    Spacing="8" />
+                    Spacing="0" />
 
                 <!--
                   ══ the carousel ══
-                  Narrow only: one instrument at a time, swiped. The cards are
-                  moved in here from the bench by the page when the width
-                  crosses the breakpoint, so both layouts share one set.
+                  One instrument at a time on every width: swiped on a phone,
+                  arrowed on a desktop. The cards live here, so pins, ranges
+                  and entrances persist across every resize.
                 -->
                 <!--
                   The FlipView takes the whole row and each item centres its
                   card: a FlipView sized to its content measures the card once,
                   before the plot has taken its height, and clips the foot.
                 -->
+                <!--
+                  ══ the index ══
+                  Wide only: the four instruments by name and current reading,
+                  one under the other at the left of the card. The one in the
+                  room is ink; the rest are quiet. Built by the page from the
+                  cards themselves, so it can never disagree with them.
+                -->
+                <StackPanel
+                    x:Name="Index"
+                    Grid.Row="2"
+                    Grid.Column="0"
+                    Margin="0,8,36,0"
+                    VerticalAlignment="Center"
+                    Spacing="4"
+                    Visibility="Collapsed" />
+
                 <FlipView
                     x:Name="Carousel"
                     Grid.Row="2"
+                    Grid.Column="1"
                     VerticalAlignment="Stretch"
                     Background="Transparent"
                     IsTabStop="False"
@@ -143,32 +196,9 @@
                             <Setter Property="VerticalContentAlignment" Value="Center" />
                         </Style>
                     </FlipView.ItemContainerStyle>
-                </FlipView>
-
-                <!-- ══ the bench ══ -->
-                <Grid
-                    x:Name="Bench"
-                    Grid.Row="2"
-                    ColumnSpacing="16"
-                    RowSpacing="16"
-                    Visibility="Collapsed">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-
                     <!-- the period labels of the ridge and the sessions are live range switchers -->
                     <controls:MeasureCard
                         x:Name="RidgeCard"
-                        Grid.Row="0"
-                        Grid.Column="0"
-                        Grid.ColumnSpan="2"
                         FootRight="hours"
                         HeadLeft="Deep work"
                         IsRangeSwitch="True"
@@ -179,9 +209,6 @@
 
                     <controls:MeasureCard
                         x:Name="SessionsCard"
-                        Grid.Row="1"
-                        Grid.Column="0"
-                        Grid.ColumnSpan="2"
                         FootRight="focus"
                         HeadLeft="Sessions"
                         IsRangeSwitch="True"
@@ -192,9 +219,6 @@
 
                     <controls:MeasureCard
                         x:Name="NightCard"
-                        Grid.Row="2"
-                        Grid.Column="0"
-                        Grid.ColumnSpan="2"
                         AxisLabels="21, 00, 03, 06, 09"
                         FootRight="restful"
                         HeadLeft="Sleep"
@@ -206,9 +230,6 @@
 
                     <controls:MeasureCard
                         x:Name="RoadCard"
-                        Grid.Row="3"
-                        Grid.Column="0"
-                        Grid.ColumnSpan="2"
                         AxisLabels="0, 25 km"
                         HeadLeft="Running"
                         HeadRight="This week"
@@ -217,7 +238,89 @@
                         <charts:RoadChart x:Name="Road" />
                     </controls:MeasureCard>
 
-                </Grid>
+                    <!--
+                      ══ the overview ══
+                      The fifth stop: all four instruments at once, at reading
+                      density. These are second cards over the same records -
+                      the page mirrors every numeral into them - and a tap on
+                      a tile turns the carousel to that instrument's own card.
+                      Two by two from 620; a single scrolling column below.
+                    -->
+                    <ScrollViewer
+                        x:Name="Overview"
+                        HorizontalScrollMode="Disabled"
+                        IsTabStop="False"
+                        VerticalScrollBarVisibility="Auto">
+                        <Grid
+                            x:Name="TileGrid"
+                            ColumnSpacing="16"
+                            RowSpacing="16"
+                            VerticalAlignment="Center">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <controls:MeasureCard
+                                x:Name="RidgeTile"
+                                Grid.Row="0"
+                                Grid.Column="0"
+                                Grid.ColumnSpan="2"
+                                FootRight="hours"
+                                HeadLeft="Deep work"
+                                RiseDelay="0"
+                                Temperature="Effort">
+                                <charts:RidgeChart x:Name="RidgeMirror" />
+                            </controls:MeasureCard>
+
+                            <controls:MeasureCard
+                                x:Name="SessionsTile"
+                                Grid.Row="1"
+                                Grid.Column="0"
+                                Grid.ColumnSpan="2"
+                                FootRight="focus"
+                                HeadLeft="Sessions"
+                                RiseDelay="120"
+                                Temperature="Frequency">
+                                <charts:StepChart x:Name="SessionsMirror" />
+                            </controls:MeasureCard>
+
+                            <controls:MeasureCard
+                                x:Name="NightTile"
+                                Grid.Row="2"
+                                Grid.Column="0"
+                                Grid.ColumnSpan="2"
+                                AxisLabels="21, 00, 03, 06, 09"
+                                FootRight="restful"
+                                HeadLeft="Sleep"
+                                HeadRight="Last night"
+                                RiseDelay="240"
+                                Temperature="Rest">
+                                <charts:NightChart x:Name="NightMirror" />
+                            </controls:MeasureCard>
+
+                            <controls:MeasureCard
+                                x:Name="RoadTile"
+                                Grid.Row="3"
+                                Grid.Column="0"
+                                Grid.ColumnSpan="2"
+                                AxisLabels="0, 25 km"
+                                HeadLeft="Running"
+                                HeadRight="This week"
+                                RiseDelay="360"
+                                Temperature="Distance">
+                                <charts:RoadChart x:Name="RoadMirror" />
+                            </controls:MeasureCard>
+                        </Grid>
+                    </ScrollViewer>
+                </FlipView>
+
             </Grid>
         </Grid>
     </ScrollViewer>

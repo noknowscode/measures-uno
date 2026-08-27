@@ -2,27 +2,26 @@ using System.Globalization;
 using Measures.Controls;
 using Measures.Data;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Automation;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
 
 namespace Measures;
 
 /// <summary>
-/// One page, four instruments on a bench. Every numeral is derived from the
+/// One page, four instruments read one at a time. Every numeral is derived from the
 /// same record the chart draws, so a card can never say one thing and show
 /// another. The ridge and the sessions window onto a longer history; their
 /// period labels switch the window, and everything on the card recomputes.
 /// </summary>
 public sealed partial class MeasuresPage : Page
 {
-    /// <summary>The bench's breakpoint, the same number the AdaptiveTrigger uses.</summary>
-    const double WideWidth = 620;
-
     readonly List<Ellipse> _pips = [];
+    readonly List<(SpacedText Name, TextBlock Reading)> _index = [];
 
     int _ridgeDays = 7;
     int _sessionDays = 14;
-    bool? _onBench;
 
     public MeasuresPage()
     {
@@ -35,6 +34,7 @@ public sealed partial class MeasuresPage : Page
             _ridgeDays = _ridgeDays == 7 ? 14 : 7;
             ShowRidge(_ridgeDays);
             RidgeCard.Replay();
+            PaintIndex();
         };
 
         SessionsCard.RangeToggled += (_, _) =>
@@ -42,16 +42,20 @@ public sealed partial class MeasuresPage : Page
             _sessionDays = _sessionDays == 7 ? 14 : 7;
             ShowSessions(_sessionDays);
             SessionsCard.Replay();
+            PaintIndex();
         };
 
-        // seat before the first load when the window already knows its width,
-        // so a phone never pays for a bench it will not show
-        if (Microsoft.UI.Xaml.Window.Current?.Bounds.Width is > 0 and var width)
-        {
-            Seat(width >= WideWidth);
-        }
+        // the whole card swipes, so the night plot claims the finger on press -
+        // there is no vertical scroll to protect
+        Night.ScrubOnPress = true;
+        NightMirror.ScrubOnPress = true;
 
-        Root.SizeChanged += (_, e) => Seat(e.NewSize.Width >= WideWidth);
+        WireTiles();
+        BuildPips();
+        BuildIndex();
+
+        // on a desktop the carousel is arrowed; the root already holds focus
+        Root.KeyDown += OnRootKeyDown;
 
 #if FRAMEWATCH
         WatchFrames();
@@ -60,14 +64,13 @@ public sealed partial class MeasuresPage : Page
         Loaded += (_, _) =>
         {
             PadForChrome();
-            Seat(Root.ActualWidth >= WideWidth);
+            HideStockArrows();
             ThemeLabel.Text = ActualTheme == ElementTheme.Dark ? "Light" : "Dark";
 
             // on activation focus lands on the first focusable control, which
-            // scrolls the page down and paints a focus ring nobody asked for.
-            // Park it on the root instead; Tab still walks into the bench.
+            // paints a focus ring nobody asked for. Park it on the root
+            // instead; Tab still walks into the card.
             Root.Focus(FocusState.Programmatic);
-            Scroll.ChangeView(null, 0, null, disableAnimation: true);
         };
     }
 
@@ -95,6 +98,37 @@ public sealed partial class MeasuresPage : Page
     }
 
     MeasureCard[] Cards => [RidgeCard, SessionsCard, NightCard, RoadCard];
+
+    /// <summary>The overview's tiles, in the same order as the cards they mirror.</summary>
+    MeasureCard[] Tiles => [RidgeTile, SessionsTile, NightTile, RoadTile];
+
+    /// <summary>The carousel's last stop: all four at once.</summary>
+    int OverviewIndex => Carousel.Items.Count - 1;
+
+    /// <summary>
+    /// A tile is a card in a room with the others, so it does not switch
+    /// ranges or read on its own: a tap on it turns the carousel to the
+    /// instrument's own card, where those things live.
+    /// </summary>
+    void WireTiles()
+    {
+        for (var i = 0; i < Tiles.Length; i++)
+        {
+            var at = i;
+            Tiles[i].Tapped += (_, _) => Carousel.SelectedIndex = at;
+        }
+    }
+
+    /// <summary>Everything the head, numeral and axis say, said again on the tile.</summary>
+    static void Mirror(MeasureCard from, MeasureCard to)
+    {
+        to.NumeralValue = from.NumeralValue;
+        to.NumeralSuffix = from.NumeralSuffix;
+        to.NumeralTail = from.NumeralTail;
+        to.HeadRight = from.HeadRight;
+        to.AxisLabels = from.AxisLabels;
+        to.FootRight = from.FootRight;
+    }
 
 #if FRAMEWATCH
     /// <summary>
@@ -139,66 +173,112 @@ public sealed partial class MeasuresPage : Page
     }
 #endif
 
-    /// <summary>
-    /// Seats the four cards on the bench or in the carousel. One set of cards,
-    /// two rooms: re-parenting keeps every pin, range and entrance state the
-    /// reader has built up, where a second set of cards would lose it.
-    /// </summary>
-    void Seat(bool onBench)
+    /// <summary>Left and right arrows turn the carousel; Home and End jump to its ends.</summary>
+    void OnRootKeyDown(object sender, KeyRoutedEventArgs e)
     {
-        if (_onBench == onBench)
+        var last = Carousel.Items.Count - 1;
+
+        var next = e.Key switch
+        {
+            Windows.System.VirtualKey.Left => Math.Max(Carousel.SelectedIndex - 1, 0),
+            Windows.System.VirtualKey.Right => Math.Min(Carousel.SelectedIndex + 1, last),
+            Windows.System.VirtualKey.Home => 0,
+            Windows.System.VirtualKey.End => last,
+            _ => -1,
+        };
+
+        if (next < 0 || next == Carousel.SelectedIndex)
         {
             return;
         }
 
-        _onBench = onBench;
-
-        foreach (var card in Cards)
-        {
-            Bench.Children.Remove(card);
-            Carousel.Items.Remove(card);
-        }
-
-        // in the carousel the whole card swipes, so the night plot must claim
-        // the finger on press - there is no vertical scroll left to protect
-        Night.ScrubOnPress = !onBench;
-
-        // one card fits the screen, so the page stops scrolling: that is what
-        // lets the star row take the remaining height and centre the card in it
-        Scroll.VerticalScrollMode = onBench ? ScrollMode.Enabled : ScrollMode.Disabled;
-        Scroll.VerticalScrollBarVisibility = onBench ? ScrollBarVisibility.Auto : ScrollBarVisibility.Disabled;
-
-        if (onBench)
-        {
-            foreach (var card in Cards)
-            {
-                Bench.Children.Add(card);
-            }
-
-            return;
-        }
-
-        foreach (var card in Cards)
-        {
-            Carousel.Items.Add(card);
-        }
-
-        BuildPips();
+        Carousel.SelectedIndex = next;
+        e.Handled = true;
     }
 
+    /// <summary>
+    /// The pips are drawn at 5 epx and hit at 24: a pip is a place to tap on a
+    /// desktop that has no finger to swipe with, so each sits in a bare button.
+    /// </summary>
     void BuildPips()
     {
         Pips.Children.Clear();
         _pips.Clear();
 
-        for (var i = 0; i < Cards.Length; i++)
+        for (var i = 0; i < Carousel.Items.Count; i++)
         {
+            var at = i;
             var pip = new Ellipse { Width = 5, Height = 5 };
-            Pips.Children.Add(pip);
+            var hit = new Button
+            {
+                Style = (Style)Application.Current.Resources["PipButtonStyle"],
+                Content = pip,
+            };
+
+            AutomationProperties.SetName(hit, i < Cards.Length ? Cards[i].HeadLeft : "All four");
+            hit.Click += (_, _) => Carousel.SelectedIndex = at;
+
+            Pips.Children.Add(hit);
             _pips.Add(pip);
         }
 
         PaintPips();
+    }
+
+    /// <summary>
+    /// The FlipView's stock arrows are Fluent chrome on a page that has none;
+    /// the rail, the pips and the arrow keys turn the carousel instead. Found
+    /// by part name after the template lands, because the template is Uno's.
+    /// </summary>
+    void HideStockArrows()
+    {
+        // the template lands after the page's Loaded, and the FlipView shows
+        // its buttons again on pointer-over; a zero box survives both
+        Carousel.LayoutUpdated += OnCarouselLayout;
+
+        void OnCarouselLayout(object? _, object __)
+        {
+            var hidden = 0;
+
+            foreach (var name in new[] { "PreviousButtonHorizontal", "NextButtonHorizontal", "PreviousButtonVertical", "NextButtonVertical" })
+            {
+                if (FindDescendant(Carousel, name) is FrameworkElement arrow)
+                {
+                    arrow.MaxWidth = 0;
+                    arrow.MaxHeight = 0;
+                    arrow.IsHitTestVisible = false;
+                    arrow.Visibility = Visibility.Collapsed;
+                    hidden++;
+                }
+            }
+
+            if (hidden == 4)
+            {
+                Carousel.LayoutUpdated -= OnCarouselLayout;
+            }
+        }
+    }
+
+    static FrameworkElement? FindDescendant(DependencyObject root, string name)
+    {
+        var count = VisualTreeHelper.GetChildrenCount(root);
+
+        for (var i = 0; i < count; i++)
+        {
+            var child = VisualTreeHelper.GetChild(root, i);
+
+            if (child is FrameworkElement fe && fe.Name == name)
+            {
+                return fe;
+            }
+
+            if (FindDescendant(child, name) is { } found)
+            {
+                return found;
+            }
+        }
+
+        return null;
     }
 
     void PaintPips()
@@ -211,7 +291,103 @@ public sealed partial class MeasuresPage : Page
         }
     }
 
-    void OnCarouselChanged(object sender, SelectionChangedEventArgs e) => PaintPips();
+    void OnCarouselChanged(object sender, SelectionChangedEventArgs e)
+    {
+        PaintPips();
+        PaintIndex();
+    }
+
+    /// <summary>
+    /// One row per card: its name in the label voice, its reading in the serif
+    /// under it. The reading is the card's own numeral, re-read whenever the
+    /// card recomputes, so the rail and the card cannot drift apart.
+    /// </summary>
+    void BuildIndex()
+    {
+        var res = Application.Current.Resources;
+
+        Index.Children.Clear();
+        _index.Clear();
+
+        for (var i = 0; i < Cards.Length; i++)
+        {
+            var card = Cards[i];
+            var at = i;
+
+            var name = new SpacedText
+            {
+                Style = (Style)res["LabelStyle"],
+                Text = card.HeadLeft,
+            };
+
+            var reading = new TextBlock
+            {
+                FontFamily = (FontFamily)res["SerifFont"],
+                FontSize = (double)res["TitleSize"],
+                Margin = new Thickness(0, 6, 0, 0),
+                TextWrapping = TextWrapping.NoWrap,
+            };
+
+            var row = new Button
+            {
+                Style = (Style)res["IndexButtonStyle"],
+                Content = new StackPanel { Children = { name, reading } },
+            };
+
+            AutomationProperties.SetName(row, card.HeadLeft);
+            row.Click += (_, _) => Carousel.SelectedIndex = at;
+
+            Index.Children.Add(row);
+            _index.Add((name, reading));
+        }
+
+        // and the room with all four in it
+        {
+            var name = new SpacedText { Style = (Style)res["LabelStyle"], Text = "Overview" };
+            var reading = new TextBlock
+            {
+                FontFamily = (FontFamily)res["SerifItalicFont"],
+                FontStyle = Windows.UI.Text.FontStyle.Italic,
+                FontSize = (double)res["TitleSize"],
+                Margin = new Thickness(0, 6, 0, 0),
+                Text = "all four",
+            };
+            var row = new Button
+            {
+                Style = (Style)res["IndexButtonStyle"],
+                Content = new StackPanel { Children = { name, reading } },
+            };
+
+            AutomationProperties.SetName(row, "All four");
+            row.Click += (_, _) => Carousel.SelectedIndex = OverviewIndex;
+
+            Index.Children.Add(row);
+            _index.Add((name, reading));
+        }
+
+        PaintIndex();
+    }
+
+    /// <summary>The instrument in the room is ink; the others wait in 35%.</summary>
+    void PaintIndex()
+    {
+        var res = Application.Current.Resources;
+
+        for (var i = 0; i < _index.Count; i++)
+        {
+            var (name, reading) = _index[i];
+            var current = i == Carousel.SelectedIndex;
+
+            if (i < Cards.Length)
+            {
+                var card = Cards[i];
+                reading.Text = card.NumeralValue + card.NumeralSuffix + card.NumeralTail;
+            }
+
+            name.Opacity = current ? 1 : 0.55;
+            reading.Foreground = (Brush)res[current ? "InkBrush" : "InkSoft35Brush"];
+        }
+    }
 
     /// <summary>
     /// Flips the scheme on the window's root frame, which is what Palette
@@ -238,7 +414,7 @@ public sealed partial class MeasuresPage : Page
     /// </summary>
     void OnReplay(object sender, RoutedEventArgs e)
     {
-        foreach (var card in Cards)
+        foreach (var card in Cards.Concat(Tiles))
         {
             card.Replay();
         }
@@ -251,6 +427,7 @@ public sealed partial class MeasuresPage : Page
 
         var night = SampleData.Night;
         Night.ChartData = night;
+        NightMirror.ChartData = night;
         NightCard.NumeralValue = night.Slept.Hours.ToString(CultureInfo.InvariantCulture);
         NightCard.NumeralSuffix = " h ";
         NightCard.NumeralTail = night.Slept.Minutes.ToString("00", CultureInfo.InvariantCulture);
@@ -261,6 +438,10 @@ public sealed partial class MeasuresPage : Page
         RoadCard.NumeralValue = runs.Ran.ToString("0.#", CultureInfo.InvariantCulture);
         RoadCard.NumeralSuffix = " km";
         RoadCard.FootRight = runs.Runs.Count == 1 ? "1 run" : $"{runs.Runs.Count} runs";
+        RoadMirror.ChartData = runs;
+
+        Mirror(NightCard, NightTile);
+        Mirror(RoadCard, RoadTile);
     }
 
     /// <summary>The ridge over the last N days: totals, average, peak and axis dates all follow.</summary>
@@ -274,6 +455,9 @@ public sealed partial class MeasuresPage : Page
         RidgeCard.NumeralSuffix = " h";
         RidgeCard.HeadRight = $"{days} days";
         RidgeCard.AxisLabels = $"{Format.DayLabel(ridge.Days[0].Date)}, {Format.DayLabel(ridge.Days[^1].Date)}";
+
+        RidgeMirror.ChartData = ridge;
+        Mirror(RidgeCard, RidgeTile);
     }
 
     void ShowSessions(int days)
@@ -286,5 +470,9 @@ public sealed partial class MeasuresPage : Page
         SessionsCard.NumeralSuffix = sessions.Total == 1 ? " session" : " sessions";
         SessionsCard.HeadRight = $"{days} days";
         SessionsCard.AxisLabels = $"{Format.DayLabel(sessions.Days[0].Date)}, today";
+
+        SessionsMirror.PriorData = SampleData.SessionsHistory.Before(days);
+        SessionsMirror.ChartData = sessions;
+        Mirror(SessionsCard, SessionsTile);
     }
 }

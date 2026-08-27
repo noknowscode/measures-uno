@@ -509,16 +509,131 @@
         </Setter>
     </Style>
 
+    <!-- ══ PipButton ══ -->
+    <!-- a 24 epx hit around a 5 epx pip; nothing drawn but the pip itself -->
+    <Style x:Key="PipButtonStyle" TargetType="Button">
+        <Setter Property="Width" Value="24" />
+        <Setter Property="Height" Value="24" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="UseSystemFocusVisuals" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid Background="Transparent">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        <Ellipse
+                            x:Name="FocusRing"
+                            Width="14"
+                            Height="14"
+                            Stroke="{StaticResource InkBrush}"
+                            StrokeThickness="1.5"
+                            IsHitTestVisible="False"
+                            Opacity="0" />
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="FocusStates">
+                                <VisualState x:Name="Unfocused" />
+                                <VisualState x:Name="PointerFocused" />
+                                <VisualState x:Name="Focused">
+                                    <VisualState.Setters>
+                                        <Setter Target="FocusRing.Opacity" Value="1" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ══ IndexButton ══ -->
+    <!--
+      A row of the wide layout's index: bare, so the whole rail reads as a
+      column of type and hairlines rather than a stack of buttons. Content is
+      supplied by the page; the press lives on a scale, as every tactile thing
+      here does.
+    -->
+    <Style x:Key="IndexButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Padding" Value="0,14,0,14" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="UseSystemFocusVisuals" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid x:Name="Root" Background="Transparent">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Border
+                            x:Name="Chrome"
+                            Padding="{TemplateBinding Padding}"
+                            RenderTransformOrigin="0,0.5">
+                            <Border.RenderTransform>
+                                <ScaleTransform x:Name="Press" />
+                            </Border.RenderTransform>
+                            <ContentPresenter x:Name="Label" HorizontalAlignment="Stretch" />
+                        </Border>
+                        <Rectangle
+                            Grid.Row="1"
+                            Height="1"
+                            Fill="{StaticResource HairlineBrush}" />
+                        <Border
+                            x:Name="FocusRing"
+                            Margin="-6,-2"
+                            BorderBrush="{StaticResource InkBrush}"
+                            BorderThickness="2"
+                            CornerRadius="6"
+                            IsHitTestVisible="False"
+                            Opacity="0" />
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal" />
+                                <VisualState x:Name="PointerOver" />
+                                <VisualState x:Name="Pressed">
+                                    <Storyboard>
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="Press"
+                                            Storyboard.TargetProperty="ScaleX"
+                                            To="0.98"
+                                            Duration="0:0:0.12" />
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="Press"
+                                            Storyboard.TargetProperty="ScaleY"
+                                            To="0.98"
+                                            Duration="0:0:0.12" />
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="FocusStates">
+                                <VisualState x:Name="Unfocused" />
+                                <VisualState x:Name="PointerFocused" />
+                                <VisualState x:Name="Focused">
+                                    <VisualState.Setters>
+                                        <Setter Target="FocusRing.Opacity" Value="1" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- ══ MeasureCard ══ -->
 
     <Style TargetType="controls:MeasureCard">
         <Setter Property="MinHeight" Value="300" />
         <!--
-          Kept from the prototype, where it stopped SVG strokes scaling. XAML
-          strokes are absolute so that risk does not transfer - the cap stays as
-          a composition constraint, and this note is here so nobody "fixes" it.
+          One card fills the row, so the cap is what keeps a desktop card a card
+          and not a poster: 720 is where the numeral reaches 96 and the plot 260.
+          The card scales its own chrome between 300 and 720 (see Density).
         -->
-        <Setter Property="MaxWidth" Value="420" />
+        <Setter Property="MaxWidth" Value="720" />
         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
         <Setter Property="IsTabStop" Value="False" />
         <Setter Property="Template">
@@ -555,7 +670,7 @@
                                     RadiusY="23" />
 
                                 <!-- head -->
-                                <Grid Grid.Row="0" Padding="28,28,28,16">
+                                <Grid x:Name="PART_Head" Grid.Row="0" Padding="28,28,28,16">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
@@ -581,7 +696,7 @@
                                   fixed 40 epx to the chart, so slack never pools
                                   between them - it falls through to the foot
                                 -->
-                                <StackPanel Grid.Row="1" Padding="28,0,28,0">
+                                <StackPanel x:Name="PART_Body" Grid.Row="1" Padding="28,0,28,0">
                                     <TextBlock
                                         x:Name="PART_Numeral"
                                         FontFamily="{StaticResource SerifFont}"
@@ -591,6 +706,7 @@
                                         LineStackingStrategy="BlockLineHeight"
                                         TextWrapping="NoWrap" />
                                     <ContentPresenter
+                                        x:Name="PART_Chart"
                                         Margin="0,40,0,0"
                                         Content="{TemplateBinding Content}"
                                         ContentTemplate="{TemplateBinding ContentTemplate}"
@@ -600,13 +716,14 @@
 
                                 <!-- the footer baseline: one hairline above every foot -->
                                 <Rectangle
+                                    x:Name="PART_Rule"
                                     Grid.Row="3"
                                     Height="1"
                                     Margin="28,18,28,0"
                                     Fill="{StaticResource HairlineBrush}" />
 
                                 <!-- foot -->
-                                <Grid Grid.Row="4" Padding="28,18,28,28" ColumnSpacing="12">
+                                <Grid x:Name="PART_Foot" Grid.Row="4" Padding="28,18,28,28" ColumnSpacing="12">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />

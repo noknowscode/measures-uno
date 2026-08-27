@@ -90,6 +90,28 @@ public sealed partial class MeasureCard : ContentControl
     readonly TranslateTransform _rise = new();
 
     /// <summary>
+    /// The width the chrome was drawn for. Below it the card tightens, above
+    /// it the card loosens, both on the same factor, so a phone card and a
+    /// desktop card are the same drawing at two sizes.
+    /// </summary>
+    const double DesignCardWidth = 420;
+    const double MinDensity = 0.78;
+    const double MaxDensity = 1.5;
+
+    /// <summary>Chrome at density 1: pad, head foot, chart gap, rule gap.</summary>
+    const double Pad = 28;
+    const double HeadFoot = 16;
+    const double ChartGap = 40;
+    const double RuleGap = 18;
+
+    Grid? _head;
+    StackPanel? _body;
+    FrameworkElement? _chart;
+    FrameworkElement? _rule;
+    Grid? _foot;
+    double _density = 1;
+
+    /// <summary>
     /// The edge light, built here rather than in the dictionary: every card is
     /// a different temperature, so the brush cannot be a shared resource.
     /// </summary>
@@ -123,7 +145,11 @@ public sealed partial class MeasureCard : ContentControl
 
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
+        SizeChanged += (_, e) => Fit(e.NewSize.Width);
     }
+
+    /// <summary>How far the chrome is scaled from the 420 design, 0.78 to 1.5.</summary>
+    public double Density => _density;
 
     /// <summary>Raised when the range switcher is tapped. The page decides what the next range is.</summary>
     public event EventHandler? RangeToggled;
@@ -214,6 +240,11 @@ public sealed partial class MeasureCard : ContentControl
         }
 
         _numeral = GetTemplateChild("PART_Numeral") as TextBlock;
+        _head = GetTemplateChild("PART_Head") as Grid;
+        _body = GetTemplateChild("PART_Body") as StackPanel;
+        _chart = GetTemplateChild("PART_Chart") as FrameworkElement;
+        _rule = GetTemplateChild("PART_Rule") as FrameworkElement;
+        _foot = GetTemplateChild("PART_Foot") as Grid;
         _axis = GetTemplateChild("PART_Axis") as Canvas;
         _headLabel = GetTemplateChild("PART_HeadLabel") as FrameworkElement;
 
@@ -244,10 +275,75 @@ public sealed partial class MeasureCard : ContentControl
         }
 
         ShowRange();
+        Fit(ActualWidth, force: true);
         BuildNumeral();
         BuildAxis();
         AttachSource();
         TryRise();
+    }
+
+    /// <summary>
+    /// Scales the chrome to the card's width. The plot already follows the
+    /// width at 300:120; this brings the numeral, the paddings and the gaps
+    /// along, so the card reads as one drawing at every size rather than a
+    /// big chart under small type. Labels and whispers keep their size:
+    /// small type is small on purpose.
+    /// </summary>
+    void Fit(double width, bool force = false)
+    {
+        if (width <= 0)
+        {
+            return;
+        }
+
+        var density = Math.Clamp(width / DesignCardWidth, MinDensity, MaxDensity);
+
+        if (!force && Math.Abs(density - _density) < 0.005)
+        {
+            return;
+        }
+
+        _density = density;
+
+        var pad = Math.Round(Pad * density);
+        var res = Application.Current.Resources;
+
+        if (_head is not null)
+        {
+            _head.Padding = new Thickness(pad, pad, pad, Math.Round(HeadFoot * density));
+        }
+
+        if (_body is not null)
+        {
+            _body.Padding = new Thickness(pad, 0, pad, 0);
+        }
+
+        if (_chart is not null)
+        {
+            _chart.Margin = new Thickness(0, Math.Round(ChartGap * density), 0, 0);
+        }
+
+        if (_rule is not null)
+        {
+            _rule.Margin = new Thickness(pad, Math.Round(RuleGap * density), pad, 0);
+        }
+
+        if (_foot is not null)
+        {
+            _foot.Padding = new Thickness(pad, Math.Round(RuleGap * density), pad, pad);
+        }
+
+        if (_numeral is not null)
+        {
+            var size = (double)res["NumeralSize"] * density;
+            _numeral.FontSize = size;
+            _numeral.LineHeight = size;
+        }
+
+        MinHeight = Math.Round(300 * density);
+
+        // the unit run carries its own size, so it is rebuilt with the value
+        BuildNumeral();
     }
 
     protected override void OnContentChanged(object oldContent, object newContent)
@@ -426,7 +522,7 @@ public sealed partial class MeasureCard : ContentControl
             _numeral.Inlines.Add(new Run
             {
                 Text = NumeralSuffix,
-                FontSize = (double)Application.Current.Resources["NumeralSoftSize"],
+                FontSize = (double)Application.Current.Resources["NumeralSoftSize"] * _density,
                 FontStyle = Windows.UI.Text.FontStyle.Italic,
                 Foreground = (Brush)Application.Current.Resources["UnitBrush"],
             });
