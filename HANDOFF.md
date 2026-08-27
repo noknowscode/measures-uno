@@ -49,14 +49,18 @@ CharacterSpacing is a no-op, decoration must be `IsHitTestVisible="False"`).
 
 ## Last verified state
 
-- **Build:** `net10.0-desktop` passes, 0 warnings. Tests 24/24 green. Android not rebuilt this session.
+- **Build:** `net10.0-desktop` and `net10.0-android` pass, 0 warnings. Tests 24/24 green.
 - **Runtime (desktop, App MCP, screenshots `tools/shots/d-*.png`):** light and dark full page;
   ridge pin (`SAT 22 / 5.2 h`, "+48 % vs the 7-day average"); sessions pin (`THU 20 / 1 session`,
   "−71 % vs daily average") and invited default ("+2 vs prior week"); ridge 7→14 (46.5 h,
   `mon 10`/`sun 23`, AVG 3.3); sessions 14→7 (25 sessions, AVG 3.6); night press → "asleep
   23:04 — awake 6:36"; road replay (`WED / 6.1 km`, "14.1 km remaining after this run").
+- **Runtime (Pixel 8, `tools/shots/px-*.png`):** inset and status bar, carousel paging and
+  pips, Dark/Light, replay mid-entrance with fills hidden. The user confirmed vertical scroll,
+  day-slot hits, and the 7/14 switch by hand.
 - **Not verified:** hover previews and keyboard walking (the MCP cannot hover), reduced
-  motion, Android, the night scrub mid-drag (only press/release).
+  motion, the night scrub mid-drag by machine (the user reports it works, "not very well"
+  before the 4 px intent + scrub-on-press changes, untested since).
 
 ## Next actions
 
