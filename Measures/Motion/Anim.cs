@@ -5,27 +5,36 @@ using Windows.UI.ViewManagement;
 namespace Measures.Motion;
 
 /// <summary>
-/// The page law in one place: gravity eases in, hands ease out. Every animation
-/// in the app is built here so the reduced-motion gate cannot be forgotten -
+/// The page law in one place: gravity eases in, hands ease out. There are
+/// exactly two easings and every animation in the app is built here, so the
+/// vocabulary cannot drift and the reduced-motion gate cannot be forgotten -
 /// with animations off, the same call lands the final frame instantly.
-/// WinUI has no arbitrary cubic-bezier easing function, so the curves are
-/// authored as spline key frames, which take a KeySpline directly.
+///
+/// The curves are read from Tokens.xaml, so XAML and code cannot disagree about
+/// what "hands" means. WinUI has no arbitrary cubic-bezier easing function, so
+/// they are authored as KeySplines, which spline key frames take directly.
 /// </summary>
 public static class Anim
 {
     static UISettings? _settings;
     static bool? _enabled;
+    static KeySpline? _hands;
+    static KeySpline? _gravity;
+    static KeySpline? _hop;
 
-    /// <summary>Gravity: things that fall. cubic-bezier(0.4, 0, 1, 1)</summary>
-    public static KeySpline Gravity => Spline(0.4, 0, 1, 1);
+    /// <summary>Hands: things a person moves, and everything that settles. cubic-bezier(0.22, 1, 0.36, 1)</summary>
+    public static KeySpline EaseHands => _hands ??= Resource("EaseHands", 0.22, 1, 0.36, 1);
 
-    /// <summary>Hands: things a person moves. cubic-bezier(0.22, 1, 0.36, 1)</summary>
-    public static KeySpline Hands => Spline(0.22, 1, 0.36, 1);
+    /// <summary>Gravity: things that fall, and presses. cubic-bezier(0.4, 0, 1, 1)</summary>
+    public static KeySpline EaseGravity => _gravity ??= Resource("EaseGravity", 0.4, 0, 1, 1);
 
-    /// <summary>The browser default, for colour and opacity settling.</summary>
-    public static KeySpline Ease => Spline(0.25, 0.1, 0.25, 1);
-
-    public static KeySpline EaseOut => Spline(0, 0, 0.58, 1);
+    /// <summary>
+    /// The one grandfathered third curve. The bead hop goes up and comes back
+    /// in a single gesture, and a symmetric arc is the only honest way to draw
+    /// it - either house curve would make the rise and the fall different
+    /// motions. Nothing else may use this.
+    /// </summary>
+    public static KeySpline BeadHop => _hop ??= Spline(0.35, 0, 0.65, 1);
 
     public static bool Enabled
     {
@@ -50,14 +59,20 @@ public static class Anim
         }
     }
 
-    public static KeySpline Spline(double x1, double y1, double x2, double y2) =>
+    public static Func<double, double> Linear => u => u;
+
+    static KeySpline Spline(double x1, double y1, double x2, double y2) =>
         new() { ControlPoint1 = new Point(x1, y1), ControlPoint2 = new Point(x2, y2) };
 
-    /// <summary>easeInOutQuad, evaluated directly - the runner interpolates per frame.</summary>
-    public static double EaseInOutQuad(double u) =>
-        u < 0.5 ? 2 * u * u : 1 - Math.Pow(-2 * u + 2, 2) / 2;
-
-    public static Func<double, double> Linear => u => u;
+    /// <summary>
+    /// The curve as the resource dictionary declares it, so the two authorities
+    /// stay one. The literal is the fallback for a design surface that has not
+    /// merged Tokens.xaml yet - not a second opinion.
+    /// </summary>
+    static KeySpline Resource(string key, double x1, double y1, double x2, double y2) =>
+        Application.Current?.Resources.TryGetValue(key, out var found) == true && found is KeySpline spline
+            ? spline
+            : Spline(x1, y1, x2, y2);
 
     /// <summary>
     /// The same curve a KeySpline describes, evaluated in code, for the motion

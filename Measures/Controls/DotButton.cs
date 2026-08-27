@@ -25,6 +25,9 @@ public sealed partial class DotButton : ButtonBase
     public static readonly DependencyProperty FocusSizeProperty = DependencyProperty.Register(
         nameof(FocusSize), typeof(double), typeof(DotButton), new PropertyMetadata(16d));
 
+    /// <summary>The house duration for a mark changing size.</summary>
+    const double GrowMs = 300;
+
     readonly SolidColorBrush _fill = new();
     readonly SolidColorBrush _stroke = new();
     readonly ScaleTransform _scale = new() { ScaleX = 1, ScaleY = 1 };
@@ -74,6 +77,13 @@ public sealed partial class DotButton : ButtonBase
     /// <summary>The centre of the dot, in the coordinates of its parent canvas.</summary>
     public Point Centre { get; private set; }
 
+    /// <summary>
+    /// True while the shared clock owns this mark's size. Hover growth has to
+    /// leave it alone: two writers on one scale transform is a fight the breath
+    /// wins every tick, and the mark just judders.
+    /// </summary>
+    public bool IsBreathing => _breath is not null;
+
     protected override void OnApplyTemplate()
     {
         base.OnApplyTemplate();
@@ -108,8 +118,8 @@ public sealed partial class DotButton : ButtonBase
         RenderTransform = shift;
         Opacity = 0;
 
-        Anim.Animate(shift, "Y", -5, 0, 350, Anim.Gravity, delayMs);
-        Anim.Animate(this, "Opacity", 0, 1, 350, Anim.Gravity, delayMs);
+        Anim.Animate(shift, "Y", -5, 0, 350, Anim.EaseGravity, delayMs);
+        Anim.Animate(this, "Opacity", 0, 1, 350, Anim.EaseGravity, delayMs);
     }
 
     public void MoveTo(double centreX, double centreY)
@@ -120,8 +130,12 @@ public sealed partial class DotButton : ButtonBase
         Canvas.SetTop(this, centreY - HitSize / 2);
     }
 
-    /// <summary>Radius in chart units. Animated over 300 ms to match the page.</summary>
-    public void SetRadius(double radius, bool animate = true)
+    /// <summary>Radius in chart units. Animated over the house 300 ms.</summary>
+    public void SetRadius(double radius, bool animate = true) =>
+        SetRadius(radius, animate ? GrowMs : 0);
+
+    /// <summary>Radius in chart units, over a given duration. Zero lands it at once.</summary>
+    public void SetRadius(double radius, double ms)
     {
         _radius = radius;
 
@@ -131,14 +145,14 @@ public sealed partial class DotButton : ButtonBase
         // so the previous size animation has to be released before either path
         StopRadius();
 
-        if (!animate)
+        if (ms <= 0 || !Anim.Enabled)
         {
             _scale.ScaleX = _scale.ScaleY = target;
             return;
         }
 
-        _scaleX = Anim.Animate(_scale, "ScaleX", null, target, 300, Anim.Ease);
-        _scaleY = Anim.Animate(_scale, "ScaleY", null, target, 300, Anim.Ease);
+        _scaleX = Anim.Animate(_scale, "ScaleX", null, target, ms, Anim.EaseHands);
+        _scaleY = Anim.Animate(_scale, "ScaleY", null, target, ms, Anim.EaseHands);
     }
 
     public void SetColours(Color fill, Color stroke, double thickness, bool animate = true)

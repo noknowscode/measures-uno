@@ -11,14 +11,23 @@ using Path = Microsoft.UI.Xaml.Shapes.Path;
 namespace Measures.Charts;
 
 /// <summary>
-/// Deep work as a skyline. The gesture is <em>pin</em>: choose a day and a plumb
-/// line drops from it, so the reading is weighed against the week rather than
-/// read off an axis.
+/// Deep work as a skyline, lit butter - dawn on the ridge. The gesture is
+/// <em>pin</em>: choose a day and a plumb line drops from it, so the reading is
+/// weighed against the week rather than read off an axis.
+///
+/// A chosen day is charcoal, larger, and carries the plumb. Three channels, no
+/// hue - so the state survives being read in grayscale.
 /// </summary>
 public sealed partial class RidgeChart : ChartBase
 {
     const double Pad = 10;
     const double Ceiling = 6;
+
+    /// <summary>Resting, today, chosen, and under the pointer.</summary>
+    const double RestRadius = 2.5;
+    const double TodayRadius = 3.5;
+    const double PinnedRadius = 4;
+    const double HoverRadius = 3.75;
 
     public static readonly DependencyProperty ChartDataProperty = DependencyProperty.Register(
         nameof(ChartData), typeof(RidgeData), typeof(RidgeChart), new PropertyMetadata(null, OnDataChanged));
@@ -111,7 +120,7 @@ public sealed partial class RidgeChart : ChartBase
     {
         if (_line is not null && PlotWidth > 0)
         {
-            DrawIn(_line, PlotWidth, PlotHeight, 1800, 200, Anim.Hands);
+            DrawIn(_line, PlotWidth, PlotHeight, 1800, 200, Anim.EaseHands);
         }
 
         if (_fill is not null)
@@ -202,10 +211,36 @@ public sealed partial class RidgeChart : ChartBase
         Render(animate: true);
     }
 
-    void OnDotEntered(object sender, PointerRoutedEventArgs e) =>
-        Publish(Reading.Preview(ReadingFor((int)((DotButton)sender).Tag)));
+    /// <summary>Hover is a preview in the body as well as the caption: the mark grows.</summary>
+    void OnDotEntered(object sender, PointerRoutedEventArgs e)
+    {
+        var dot = (DotButton)sender;
+        var index = (int)dot.Tag;
 
-    void OnDotExited(object sender, PointerRoutedEventArgs e) => PublishCurrent();
+        if (!dot.IsBreathing)
+        {
+            dot.SetRadius(Math.Max(RadiusFor(index), HoverRadius));
+        }
+
+        Publish(Reading.Preview(ReadingFor(index)));
+    }
+
+    void OnDotExited(object sender, PointerRoutedEventArgs e)
+    {
+        var dot = (DotButton)sender;
+
+        if (!dot.IsBreathing)
+        {
+            dot.SetRadius(RadiusFor((int)dot.Tag));
+        }
+
+        PublishCurrent();
+    }
+
+    double RadiusFor(int index) =>
+        _selected == index ? PinnedRadius
+        : index == _dots.Count - 1 ? TodayRadius
+        : RestRadius;
 
     void OnDotKeyDown(object sender, KeyRoutedEventArgs e)
     {
@@ -262,9 +297,10 @@ public sealed partial class RidgeChart : ChartBase
             var isToday = i == today;
             var isHot = isSelected || isToday;
 
+            // charcoal fills the mark that is being read; the rest are outlines
             _dots[i].SetColours(
-                isHot ? Palette.Get(Palette.Token.Ai) : Palette.Get(Palette.Token.Card),
-                isHot ? Palette.Get(Palette.Token.Ai) : Palette.Get(Palette.Token.Ink),
+                isHot ? Palette.Get(Palette.Token.Ink) : Palette.Get(Palette.Token.Card),
+                Palette.Get(Palette.Token.Ink),
                 1.5,
                 animate);
 
@@ -275,7 +311,7 @@ public sealed partial class RidgeChart : ChartBase
 
             if (!breathes)
             {
-                _dots[i].SetRadius(isSelected ? 4 : isToday ? 3.5 : 2.5, animate);
+                _dots[i].SetRadius(RadiusFor(i), animate);
             }
         }
 
@@ -312,7 +348,7 @@ public sealed partial class RidgeChart : ChartBase
 
         if (animate)
         {
-            Anim.Animate(_pinScale, "ScaleY", 0, 1, 300, Anim.Gravity);
+            Anim.Animate(_pinScale, "ScaleY", 0, 1, 300, Anim.EaseGravity);
         }
     }
 }

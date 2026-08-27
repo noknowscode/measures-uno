@@ -13,10 +13,12 @@ using Path = Microsoft.UI.Xaml.Shapes.Path;
 namespace Measures.Charts;
 
 /// <summary>
-/// A week of running as a road. The gesture is <em>replay</em>: tap a footfall
-/// and a runner covers that leg again, leaving a wake that cools behind it.
-/// The runner is the single boldest thing on the page; everything else here
-/// stays hairline so it can be.
+/// A week of running as a road, lit blush - late sun. The gesture is
+/// <em>replay</em>: tap a footfall and a runner covers that leg again, leaving a
+/// wake of light on the road behind it. The wake is wide and soft and runs
+/// under the charcoal progress, so it reads as light rather than as a second
+/// line. The runner is the single boldest thing on the page; everything else
+/// here stays hairline so it can be.
 /// </summary>
 public sealed partial class RoadChart : ChartBase
 {
@@ -31,7 +33,15 @@ public sealed partial class RoadChart : ChartBase
     const double MarchDistance = -18;
     const double GhostDash = 2;
     const double GhostGap = 4;
+
+    /// <summary>The wake holds, then cools. A cancelled run cools four times faster.</summary>
     const double WakeFadeMs = 1200;
+    const double WakeCancelMs = 400;
+
+    const double RestRadius = 3;
+    const double ArrivedRadius = 5;
+    const double ChosenRadius = 3.5;
+    const double HoverRadius = 4;
 
     /// <summary>Breathing room above and below the road inside its plot.</summary>
     const double RoadInset = 10;
@@ -42,6 +52,9 @@ public sealed partial class RoadChart : ChartBase
     readonly List<DotButton> _marks = [];
     readonly List<(double From, double To)> _bounds = [];
     readonly Stopwatch _clock = new();
+
+    /// <summary>The runner's pace, evaluated per frame rather than key-framed.</summary>
+    readonly Func<double, double> _pace = Anim.Curve(Anim.EaseHands);
 
     Path? _ghost;
     Path? _trace;
@@ -200,7 +213,7 @@ public sealed partial class RoadChart : ChartBase
 
         if (_progress is not null && PlotWidth > 0)
         {
-            DrawIn(_progress, PlotWidth, PlotHeight, 1600, 300, Anim.Hands);
+            DrawIn(_progress, PlotWidth, PlotHeight, 1600, 300, Anim.EaseHands);
         }
 
         for (var i = 0; i < _marks.Count; i++)
@@ -332,10 +345,36 @@ public sealed partial class RoadChart : ChartBase
         Traverse(index);
     }
 
-    void OnMarkEntered(object sender, PointerRoutedEventArgs e) =>
-        Publish(Reading.Preview(ReadingFor((int)((DotButton)sender).Tag)));
+    /// <summary>Hover is a preview in the body as well as the caption: the footfall grows.</summary>
+    void OnMarkEntered(object sender, PointerRoutedEventArgs e)
+    {
+        var mark = (DotButton)sender;
+        var index = (int)mark.Tag;
 
-    void OnMarkExited(object sender, PointerRoutedEventArgs e) => PublishCurrent();
+        if (!mark.IsBreathing)
+        {
+            mark.SetRadius(Math.Max(RadiusFor(index), HoverRadius));
+        }
+
+        Publish(Reading.Preview(ReadingFor(index)));
+    }
+
+    void OnMarkExited(object sender, PointerRoutedEventArgs e)
+    {
+        var mark = (DotButton)sender;
+
+        if (!mark.IsBreathing)
+        {
+            mark.SetRadius(RadiusFor((int)mark.Tag));
+        }
+
+        PublishCurrent();
+    }
+
+    double RadiusFor(int index) =>
+        _selected != index ? RestRadius
+        : _arrived ? ArrivedRadius
+        : ChosenRadius;
 
     void OnRoadAheadPressed(object sender, PointerRoutedEventArgs e)
     {
@@ -367,7 +406,7 @@ public sealed partial class RoadChart : ChartBase
             var ghost = _ghost;
 
             _march?.Dispose();
-            _march = Ticker.Run(1200, 0, Anim.Curve(Anim.EaseOut),
+            _march = Ticker.Run(1200, 0, Anim.Curve(Anim.EaseHands),
                 eased => ghost.Data = road.DashedGeometry(GhostDash, GhostGap, MarchDistance * eased),
                 done: () => ghost.Data = road.DashedGeometry(GhostDash, GhostGap));
         }
@@ -412,11 +451,14 @@ public sealed partial class RoadChart : ChartBase
 
         for (var i = 0; i < _marks.Count; i++)
         {
-            var isSelected = _selected == i;
+            // the same grammar the ridge uses: charcoal fills what is being
+            // read, everything else is an outline. Chosen then differs from
+            // resting on fill AND size, not on size alone
+            var isHot = _selected == i || i == last;
 
             _marks[i].SetColours(
-                Palette.Get(Palette.Token.Ai),
-                Palette.Get(Palette.Token.Card),
+                isHot ? Palette.Get(Palette.Token.Ink) : Palette.Get(Palette.Token.Card),
+                Palette.Get(Palette.Token.Ink),
                 1.5,
                 animate);
 
@@ -427,7 +469,7 @@ public sealed partial class RoadChart : ChartBase
             if (!breathes)
             {
                 // the mark swells only once the runner has merged into it
-                _marks[i].SetRadius(isSelected ? (_arrived ? 5 : 3.5) : 3, animate);
+                _marks[i].SetRadius(RadiusFor(i), animate);
             }
         }
     }
@@ -475,7 +517,7 @@ public sealed partial class RoadChart : ChartBase
             }
 
             var u = Math.Min(_clock.Elapsed.TotalMilliseconds / duration, 1);
-            var length = from + (to - from) * Anim.EaseInOutQuad(u);
+            var length = from + (to - from) * _pace(u);
 
             Centre(runner, sampler.PointAtLength(length));
 
@@ -510,10 +552,12 @@ public sealed partial class RoadChart : ChartBase
             _runner.Opacity = 0;
         }
 
-        // the wake stays bright a moment, then cools
+        // The wake holds, then cools. Gravity, not hands: hands is an ease-OUT,
+        // which spends a fade in its first tenth and reads as the light being
+        // switched off. Light draining off a road is a fall, and falls ease in.
         if (_trace is not null && Anim.Enabled)
         {
-            Anim.Animate(_trace, "Opacity", 1, 0, WakeFadeMs, Anim.Ease);
+            Anim.Animate(_trace, "Opacity", 1, 0, WakeFadeMs, Anim.EaseGravity);
         }
 
         _arrived = true;
@@ -536,9 +580,17 @@ public sealed partial class RoadChart : ChartBase
             _runner.Opacity = 0;
         }
 
-        if (_trace is not null)
+        // a cancelled run does not snap the light off the road, it cools it
+        if (_trace is { Opacity: > 0 } trace)
         {
-            _trace.Opacity = 0;
+            if (Anim.Enabled)
+            {
+                Anim.Animate(trace, "Opacity", null, 0, WakeCancelMs, Anim.EaseGravity);
+            }
+            else
+            {
+                trace.Opacity = 0;
+            }
         }
     }
 
@@ -561,9 +613,9 @@ public sealed partial class RoadChart : ChartBase
         }
 
         // one hello from the finish line, and then it never speaks again
-        Anim.Animate(_echoScale, "ScaleX", 1, 13 / 4d, 1400, Anim.EaseOut, delayMs);
-        Anim.Animate(_echoScale, "ScaleY", 1, 13 / 4d, 1400, Anim.EaseOut, delayMs);
-        Anim.Animate(_echo, "Opacity", 0.7, 0, 1400, Anim.EaseOut, delayMs);
+        Anim.Animate(_echoScale, "ScaleX", 1, 13 / 4d, 1400, Anim.EaseHands, delayMs);
+        Anim.Animate(_echoScale, "ScaleY", 1, 13 / 4d, 1400, Anim.EaseHands, delayMs);
+        Anim.Animate(_echo, "Opacity", 0.7, 0, 1400, Anim.EaseHands, delayMs);
     }
 
     static void Centre(FrameworkElement element, Point at) =>

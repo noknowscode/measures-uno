@@ -47,7 +47,8 @@ public sealed partial class MeasuresPage : Page
         var ridge = SampleData.Ridge;
         Ridge.ChartData = ridge;
         RidgeCard.NumeralValue = ridge.Total.ToString("0.#", CultureInfo.InvariantCulture);
-        RidgeCard.NumeralSuffix = " h this week";
+        // value and unit only: "7 days" in the head already owns the period
+        RidgeCard.NumeralSuffix = " h";
 
         var sessions = SampleData.Sessions;
         Rain.ChartData = sessions;

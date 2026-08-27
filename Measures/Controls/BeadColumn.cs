@@ -12,9 +12,13 @@ namespace Measures.Controls;
 
 /// <summary>
 /// One day of sessions, as a stack of beads. A session is a discrete countable
-/// thing, so the chart is the count: the beads are uniform in size and colour,
-/// because grading either would encode the same fact twice and undo the
-/// count-the-drops premise.
+/// thing, so the chart is the count: within a column the beads are uniform in
+/// size and colour, because grading either would encode the same fact twice and
+/// undo the count-the-drops premise.
+///
+/// Between columns, the day being read separates on contrast and size together
+/// - full charcoal, and a bead 15% larger - so the three states (chosen, today,
+/// resting) stay distinguishable with the hue taken away.
 /// </summary>
 public sealed partial class BeadColumn : ButtonBase
 {
@@ -26,11 +30,14 @@ public sealed partial class BeadColumn : ButtonBase
     const double Pitch = BeadSize + StackGap;
     const double RestRingSize = 5;
 
-    const double FallMs = 620;
-    const double BeadStaggerMs = 110;
+    const double FallMs = 450;
+    const double BeadStaggerMs = 70;
 
-    /// <summary>How far above the plot a bead starts, so it arrives from the sky.</summary>
-    const double SkyOffset = 130;
+    /// <summary>How far above its slot a bead starts.</summary>
+    const double SkyOffset = 64;
+
+    /// <summary>How much larger the beads of the day being read sit.</summary>
+    const double OnScale = 1.15;
 
     const double HopHeight = -7;
     const double HopMs = 300;
@@ -93,7 +100,7 @@ public sealed partial class BeadColumn : ButtonBase
         }
     }
 
-    /// <summary>Indigo rather than ink: this day is the one being read.</summary>
+    /// <summary>Full charcoal and a size up: this day is the one being read.</summary>
     public bool IsOn
     {
         get => _isOn;
@@ -106,6 +113,7 @@ public sealed partial class BeadColumn : ButtonBase
 
             _isOn = value;
             Recolour(animate: true);
+            Resize();
         }
     }
 
@@ -169,7 +177,7 @@ public sealed partial class BeadColumn : ButtonBase
         {
             _pendingEntrance = null;
             _rest.Opacity = 0;
-            Track(Anim.Animate(_rest, "Opacity", 0, 1, 400, Anim.Ease, delayMs));
+            Track(Anim.Animate(_rest, "Opacity", 0, 1, 400, Anim.EaseHands, delayMs));
             return;
         }
 
@@ -182,27 +190,19 @@ public sealed partial class BeadColumn : ButtonBase
 
         for (var i = 0; i < _beads.Count; i++)
         {
-            // each bead comes in from well above the card and drops into its
-            // slot, so the column visibly stacks: the bottom bead falls furthest
-            // and lands first, and every one after it settles onto the pile
-            var rest = Canvas.GetTop(_beads[i]);
-            var from = -(rest + BeadSize + SkyOffset);
-            var fall = Math.Abs(from);
-
-            // one gravity for all of them: time goes with the square root of the
-            // distance, the same law the droplet fell under
-            var ms = FallMs * Math.Sqrt(fall / (Height + SkyOffset));
-
-            var shift = new TranslateTransform { Y = from };
+            // every bead falls the same short distance into its own slot, so the
+            // column stacks in order: the bottom bead lands first and each one
+            // after it settles onto the pile
+            var shift = new TranslateTransform { Y = -SkyOffset };
             _beads[i].RenderTransform = shift;
             _beads[i].Opacity = 0;
 
             var begin = delayMs + i * BeadStaggerMs;
 
-            Track(Anim.Animate(shift, "Y", from, 0, ms, Anim.Gravity, begin));
+            Track(Anim.Animate(shift, "Y", -SkyOffset, 0, FallMs, Anim.EaseGravity, begin));
             // in before it is halfway down, so it is a falling bead and not a
             // bead that materialises at the moment it lands
-            Track(Anim.Animate(_beads[i], "Opacity", 0, 1, ms * 0.25, Anim.Gravity, begin));
+            Track(Anim.Animate(_beads[i], "Opacity", 0, 1, FallMs * 0.25, Anim.EaseGravity, begin));
         }
     }
 
@@ -224,8 +224,9 @@ public sealed partial class BeadColumn : ButtonBase
         top.RenderTransform = _hop;
         _hop.Y = 0;
 
-        Track(Anim.Animate(_hop, "Y", 0, HopHeight, HopMs / 2, Anim.Hands, completed: () =>
-            Track(Anim.Animate(_hop, "Y", HopHeight, 0, HopMs / 2, Anim.Gravity))));
+        // one symmetric arc, up and back - the sole curve outside the house pair
+        Track(Anim.Animate(_hop, "Y", 0, HopHeight, HopMs / 2, Anim.BeadHop, completed: () =>
+            Track(Anim.Animate(_hop, "Y", HopHeight, 0, HopMs / 2, Anim.BeadHop))));
 
         if (_plip is null)
         {
@@ -237,15 +238,16 @@ public sealed partial class BeadColumn : ButtonBase
         _plipScale.ScaleX = _plipScale.ScaleY = 0.6;
         _plip.Opacity = 0;
 
-        Track(Anim.Animate(_plipScale, "ScaleX", 0.6, 2.4, PlipMs, Anim.EaseOut, PlipDelayMs));
-        Track(Anim.Animate(_plipScale, "ScaleY", 0.6, 2.4, PlipMs, Anim.EaseOut, PlipDelayMs));
-        Track(Anim.Animate(_plip, "Opacity", 0.9, 0, PlipMs, Anim.EaseOut, PlipDelayMs));
+        Track(Anim.Animate(_plipScale, "ScaleX", 0.6, 2.4, PlipMs, Anim.EaseHands, PlipDelayMs));
+        Track(Anim.Animate(_plipScale, "ScaleY", 0.6, 2.4, PlipMs, Anim.EaseHands, PlipDelayMs));
+        Track(Anim.Animate(_plip, "Opacity", 0.9, 0, PlipMs, Anim.EaseHands, PlipDelayMs));
     }
 
     /// <summary>
-    /// Hover and focus wash the column indigo from the top down, one bead at a
-    /// time - the same downward read the gradient pour used to give, in the
-    /// discrete form the beads ask for.
+    /// Hover and focus darken the column from the top down, one bead at a time -
+    /// the same downward read the gradient pour used to give, in the discrete
+    /// form the beads ask for. This is the body's half of the preview; the
+    /// caption reads at the same moment.
     /// </summary>
     void Cascade(bool on)
     {
@@ -254,7 +256,7 @@ public sealed partial class BeadColumn : ButtonBase
             return;
         }
 
-        var target = on ? Palette.Get(Palette.Token.Ai) : Palette.Get(Palette.Token.Ink, 0.75);
+        var target = on ? Palette.Get(Palette.Token.Ink) : Palette.Get(Palette.Token.Ink, RestAlpha);
 
         for (var i = 0; i < _fills.Count; i++)
         {
@@ -322,7 +324,7 @@ public sealed partial class BeadColumn : ButtonBase
             _fills.Add(fill);
         }
 
-        PlacePlip();
+        Resize();
         ApplyBreath();
         RunPendingEntrance();
     }
@@ -336,11 +338,37 @@ public sealed partial class BeadColumn : ButtonBase
 
         var top = _beads[^1];
 
-        Canvas.SetLeft(_plip, Canvas.GetLeft(top) + BeadSize / 2 - _plip.Width / 2);
-        Canvas.SetTop(_plip, Canvas.GetTop(top) + BeadSize / 2 - _plip.Height / 2);
+        Canvas.SetLeft(_plip, Canvas.GetLeft(top) + top.Width / 2 - _plip.Width / 2);
+        Canvas.SetTop(_plip, Canvas.GetTop(top) + top.Height / 2 - _plip.Height / 2);
     }
 
-    Color BaseColour() => _isOn ? Palette.Get(Palette.Token.Ai) : Palette.Get(Palette.Token.Ink, 0.75);
+    /// <summary>A resting day is held well back, so the read day is unmistakably darker.</summary>
+    const double RestAlpha = 0.5;
+
+    Color BaseColour() => _isOn ? Palette.Get(Palette.Token.Ink) : Palette.Get(Palette.Token.Ink, RestAlpha);
+
+    /// <summary>
+    /// The second, non-hue channel: the day being read is a size up. Written
+    /// straight to Width/Height rather than a transform, because these beads are
+    /// laid out on a Canvas and there is no layout pass to fight.
+    /// </summary>
+    void Resize()
+    {
+        var size = _isOn ? BeadSize * OnScale : BeadSize;
+        var centreX = Width / 2;
+        var floor = Height;
+
+        for (var i = 0; i < _beads.Count; i++)
+        {
+            _beads[i].Width = size;
+            _beads[i].Height = size;
+
+            Canvas.SetLeft(_beads[i], centreX - size / 2);
+            Canvas.SetTop(_beads[i], floor - size - i * Pitch);
+        }
+
+        PlacePlip();
+    }
 
     void Recolour(bool animate)
     {
@@ -394,6 +422,15 @@ public sealed partial class BeadColumn : ButtonBase
 
     void Track(Storyboard board) => _running.Add(board);
 
+    /// <summary>
+    /// Stops everything in flight and settles what it was animating.
+    ///
+    /// The settling is not optional. A HoldEnd storyboard holds its final value
+    /// on top of the element's own; stopping it - even long after it finished -
+    /// drops the element straight back to the local value underneath, which for
+    /// an entrance is the start of the fall. Without this, tapping a day made
+    /// its whole column jump back into the sky at zero opacity and disappear.
+    /// </summary>
     void StopAll()
     {
         foreach (var board in _running)
@@ -403,6 +440,21 @@ public sealed partial class BeadColumn : ButtonBase
 
         _running.Clear();
         _hop.Y = 0;
+
+        foreach (var bead in _beads)
+        {
+            bead.Opacity = 1;
+
+            if (bead.RenderTransform is TranslateTransform shift)
+            {
+                shift.Y = 0;
+            }
+        }
+
+        if (_rest is not null)
+        {
+            _rest.Opacity = 1;
+        }
 
         if (_plip is not null)
         {

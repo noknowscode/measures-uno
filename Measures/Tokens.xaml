@@ -1,8 +1,13 @@
 <!--
-  The law of the page: history is drawn in ink, the living edge in indigo.
+  Soft Materialism. Warm tactile neutrals as the base; charcoal carries data,
+  type and touch; colour exists only as temperatures of light - large,
+  translucent, atmospheric. Never a saturated fill, never hue-as-accent.
+
   A plain root-level dictionary, not ThemeDictionaries: custom keys inside a
   ThemeDictionary resolve unreliably on Skia. Palette re-colours these very
-  brush instances on ActualThemeChanged, so every consumer follows live.
+  brush instances on ActualThemeChanged, so every consumer follows live, and it
+  is the authority on the values - the literals here are only the light scheme
+  written down so the designer surface has something to show.
 -->
 <ResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -15,73 +20,88 @@
     <x:Double x:Key="LabelSize">9.5</x:Double>
     <x:Double x:Key="AxisSize">8.5</x:Double>
     <x:Double x:Key="CaptionSize">15</x:Double>
+    <!-- 1.35 line box: italic descenders never clip against the one-line ellipsis -->
+    <x:Double x:Key="CaptionLineHeight">20.25</x:Double>
     <x:Double x:Key="NumeralSize">60</x:Double>
     <x:Double x:Key="NumeralSoftSize">24</x:Double>
     <x:Double x:Key="TitleSize">26</x:Double>
 
-    <!-- solids; Alpha is authored here and preserved by Palette on theme change -->
-    <SolidColorBrush x:Key="MistBrush"      Color="#F6F7F5" />
-    <SolidColorBrush x:Key="Mist2Brush"     Color="#F1F3F1" />
-    <SolidColorBrush x:Key="CardBrush"      Color="#FBFCFB" />
-    <SolidColorBrush x:Key="CardLitBrush"   Color="#FCFDFC" />
-    <SolidColorBrush x:Key="InkBrush"       Color="#2C2E2C" />
-    <SolidColorBrush x:Key="QuietBrush"     Color="#9AA09B" />
-    <SolidColorBrush x:Key="AiBrush"        Color="#5A6C8F" />
-    <SolidColorBrush x:Key="HairlineBrush"  Color="#1A2C2E2C" />
-    <SolidColorBrush x:Key="InkSoft12Brush" Color="#1F2C2E2C" />
-    <SolidColorBrush x:Key="InkSoft22Brush" Color="#382C2E2C" />
-    <SolidColorBrush x:Key="InkSoft35Brush" Color="#592C2E2C" />
-    <SolidColorBrush x:Key="AiSoft50Brush"  Color="#805A6C8F" />
-    <SolidColorBrush x:Key="AiSoft40Brush"  Color="#665A6C8F" />
-    <SolidColorBrush x:Key="AiSoft35Brush"  Color="#595A6C8F" />
+    <!--
+      Two easings, and only two. Gravity eases in, hands ease out. A literal
+      easing in a storyboard is a review failure; the single grandfathered
+      exception is the bead hop, which needs symmetry to go up and come back.
+      Motion authored in code reads these same curves through Anim.
+    -->
+    <KeySpline x:Key="EaseHands" ControlPoint1="0.22,1" ControlPoint2="0.36,1" />
+    <KeySpline x:Key="EaseGravity" ControlPoint1="0.4,0" ControlPoint2="1,1" />
+
+    <!-- ══ neutral axis ══ -->
+    <SolidColorBrush x:Key="CanvasBrush" Color="#F5F0EC" />
+    <SolidColorBrush x:Key="Canvas2Brush" Color="#E8E5E4" />
+    <SolidColorBrush x:Key="CardBrush" Color="#FBF8F5" />
+    <SolidColorBrush x:Key="CardLitBrush" Color="#FCFAF8" />
+    <SolidColorBrush x:Key="InkBrush" Color="#1F1F1E" />
+    <SolidColorBrush x:Key="QuietBrush" Color="#A19A96" />
+
+    <!-- the metric name leads the head; the period beside it stays quiet -->
+    <SolidColorBrush x:Key="InkLeadBrush" Color="#9E1F1F1E" />
+
+    <SolidColorBrush x:Key="HairlineBrush" Color="#1A1F1F1E" />
+    <SolidColorBrush x:Key="InkSoft12Brush" Color="#1F1F1F1E" />
+    <SolidColorBrush x:Key="InkSoft22Brush" Color="#381F1F1E" />
+    <SolidColorBrush x:Key="InkSoft35Brush" Color="#591F1F1E" />
+    <SolidColorBrush x:Key="InkSoft50Brush" Color="#801F1F1E" />
 
     <LinearGradientBrush x:Key="PageBrush" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Offset="0" Color="#F6F7F5" />
-        <GradientStop Offset="1" Color="#F1F3F1" />
+        <GradientStop Offset="0" Color="#F5F0EC" />
+        <GradientStop Offset="1" Color="#E8E5E4" />
     </LinearGradientBrush>
 
     <!--
-      The device face, lit from above and dissolving into the table at its foot.
-      The last stop is the Mist token exactly, which is what makes the foot
-      dissolve instead of darken - and the charts are pinned there, so each
-      instrument ends up floating on mist inside its own face. Achromatic on
-      purpose: indigo is reserved for things that are alive.
+      The device face, lit from above and dissolving into the field at its foot.
+      The last stop is the Canvas token exactly, which is what makes the foot
+      dissolve instead of darken.
 
       Three zones, shaped against 8-bit banding rather than drawn as one ramp:
-      a single-level lift across the top (one step, so it cannot band), a
-      genuinely flat middle, and the whole dissolve concentrated in the bottom
-      38% where five levels fall close enough together to read as air.
+      a single-level lift across the top, a genuinely flat middle, and the whole
+      dissolve concentrated in the bottom 38%. That shaping is the whole defence
+      now that the card carries no grain: measured down a dark card it steps one
+      level every 5-8 px, which is well under the ~20 px a visible band needs.
     -->
     <LinearGradientBrush x:Key="CardSurfaceBrush" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Offset="0"    Color="#FCFDFC" />
-        <GradientStop Offset="0.30" Color="#FBFCFB" />
-        <GradientStop Offset="0.62" Color="#FBFCFB" />
-        <GradientStop Offset="1"    Color="#F6F7F5" />
+        <GradientStop Offset="0" Color="#FCFAF8" />
+        <GradientStop Offset="0.30" Color="#FBF8F5" />
+        <GradientStop Offset="0.62" Color="#FBF8F5" />
+        <GradientStop Offset="1" Color="#F5F0EC" />
     </LinearGradientBrush>
 
-    <!-- the mist under the ridge -->
+    <!-- ══ light axis: temperatures, never accents ══ -->
+
+    <!-- dawn on the ridge -->
     <LinearGradientBrush x:Key="RidgeMistBrush" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Offset="0" Color="#295A6C8F" />
-        <GradientStop Offset="1" Color="#005A6C8F" />
+        <GradientStop Offset="0" Color="#D9F1E8CF" />
+        <GradientStop Offset="1" Color="#2EF1E8CF" />
     </LinearGradientBrush>
 
-    <!-- night sky: light in the middle of the night, nothing at either edge -->
+    <!-- dusk: lavender through the middle of the night, nothing at either edge -->
     <LinearGradientBrush x:Key="NightSkyBrush" StartPoint="0,0" EndPoint="1,0">
-        <GradientStop Offset="0"    Color="#005A6C8F" />
-        <GradientStop Offset="0.35" Color="#1A5A6C8F" />
-        <GradientStop Offset="0.55" Color="#1A5A6C8F" />
-        <GradientStop Offset="1"    Color="#005A6C8F" />
+        <GradientStop Offset="0" Color="#2EE4E0E8" />
+        <GradientStop Offset="0.35" Color="#73E4E0E8" />
+        <GradientStop Offset="0.55" Color="#73E4E0E8" />
+        <GradientStop Offset="1" Color="#2EE4E0E8" />
     </LinearGradientBrush>
 
-    <LinearGradientBrush x:Key="RestFillBrush" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Offset="0" Color="#335A6C8F" />
-        <GradientStop Offset="1" Color="#055A6C8F" />
-    </LinearGradientBrush>
+    <!--
+      Late sun left on the road, at 0.6 - the brief's own watch item, taken:
+      at full strength it tipped into reading as "pink" rather than as light.
+      Dark dims it on the same ratio as every other wash.
+    -->
+    <SolidColorBrush x:Key="BlushWakeBrush" Color="#99F1DEDA" />
 
-    <!-- the pour that fills a stem from the top down -->
-    <LinearGradientBrush x:Key="StemPourBrush" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Offset="0" Color="#FF5A6C8F" />
-        <GradientStop Offset="1" Color="#595A6C8F" />
+    <!-- and the depth of the valley itself -->
+    <LinearGradientBrush x:Key="NightValleyBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Offset="0" Color="#73DCE4EA" />
+        <GradientStop Offset="1" Color="#2EDCE4EA" />
     </LinearGradientBrush>
 
 </ResourceDictionary>

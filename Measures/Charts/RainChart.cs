@@ -5,10 +5,11 @@ using Microsoft.UI.Xaml.Automation;
 namespace Measures.Charts;
 
 /// <summary>
-/// A fortnight of focus as beads in a pool. A session is a discrete countable
-/// thing, so the count is the chart: one bead per session, readable without
-/// ever consulting the axis. The gesture is <em>plip</em> - tap a day and its
-/// top bead hops and lands, a drop disturbing the pool.
+/// A fortnight of focus as beads in a pool, lit sage - air after rain. A session
+/// is a discrete countable thing, so the count is the chart: one bead per
+/// session, readable without ever consulting the axis. The gesture is
+/// <em>plip</em> - tap a day and its top bead hops and lands, a drop disturbing
+/// the pool.
 /// </summary>
 public sealed partial class RainChart : ChartBase
 {
@@ -16,7 +17,7 @@ public sealed partial class RainChart : ChartBase
     const double GapFraction = 0.045;
 
     /// <summary>Each day rains in behind the last, left to right.</summary>
-    const double DayStaggerMs = 90;
+    const double DayStaggerMs = 50;
 
     public static readonly DependencyProperty ChartDataProperty = DependencyProperty.Register(
         nameof(ChartData), typeof(SessionLog), typeof(RainChart), new PropertyMetadata(null, OnDataChanged));

@@ -109,7 +109,7 @@ public abstract partial class ChartBase : Control, ICaptionSource
     protected static void FadeLate(UIElement element, double totalMs = 2400)
     {
         element.Opacity = 0;
-        Anim.Animate(element, "Opacity", 0, 1, totalMs * 0.6, Anim.Ease, totalMs * 0.4);
+        Anim.Animate(element, "Opacity", 0, 1, totalMs * 0.6, Anim.EaseHands, totalMs * 0.4);
     }
 
     protected static void Place(UIElement element, double left, double top)

@@ -3,33 +3,51 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#F5F0EC">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1A1918">
 <title>measures</title>
 <link href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@400&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;1,6..72,300&display=swap" rel="stylesheet">
 <style>
-  /* The law of the page: history is drawn in ink, the living edge in indigo.
-     The night curve is the one sanctioned exception — a single night is all
-     living, so it wears indigo end to end. Gravity eases in; hands ease out. */
+  /* SOFT MATERIALISM — the law of the page:
+     Warm, tactile neutrals as the base; charcoal carries data, type, and touch.
+     Color exists only as temperatures of light — large, translucent, atmospheric —
+     never as saturated fill. Each instrument owns one temperature:
+     ridge/butter (dawn), sessions/sage (after rain), night/lavender+mist (dusk),
+     road/blush (late sun). Gravity eases in; hands ease out. */
   :root {
-    --mist: #F6F7F5; --mist2: #F1F3F1; --card: #FBFCFB;
-    --ink: #2C2E2C; --quiet: #9AA09B;
-    --ink-rgb: 44,46,44; --ai: #5A6C8F; --ai-rgb: 90,108,143;
-    --hairline: rgba(44,46,44,0.10);
+    --ease-out: cubic-bezier(0.22,1,0.36,1); /* hands */
+    --ease-in: cubic-bezier(0.4,0,1,1);      /* gravity */
+    --canvas: #F5F0EC; --canvas2: #E8E5E4; --card: #FBF8F5;
+    --ink: #1F1F1E; --quiet: #A19A96;
+    --ink-rgb: 31,31,30;
+    --hairline: rgba(31,31,30,0.10);
+    --w-butter: #F1E8CF; --w-sage: #DEE4DA; --w-mist: #DCE4EA;
+    --w-lav: #E4E0E8; --w-blush: #F1DEDA;
+    --wash-hi: 0.85; --wash-mid: 0.5; --wash-lo: 0.08; --edge: 0.55;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --mist: #151714; --mist2: #101210; --card: #1B1E1B;
-      --ink: #E6E8E4; --quiet: #878E87;
-      --ink-rgb: 230,232,228; --ai: #8FA3CB; --ai-rgb: 143,163,203;
-      --hairline: rgba(230,232,228,0.10);
+      --canvas: #201E1C; --canvas2: #1A1918; --card: #282523;
+      --ink: #EBE7E2; --quiet: #928C86;
+      --ink-rgb: 235,231,226;
+      --hairline: rgba(235,231,226,0.12);
+      --wash-hi: 0.15; --wash-mid: 0.09; --wash-lo: 0.02; --edge: 0.07;
     }
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     min-height: 100vh;
-    background: linear-gradient(180deg, var(--mist), var(--mist2));
+    background: linear-gradient(180deg, var(--canvas), var(--canvas2));
     padding: clamp(20px, 4vw, 56px);
     color: var(--ink);
+    -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
   }
+  body::after {
+    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 2;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+    mix-blend-mode: soft-light; opacity: 0.4;
+  }
+  @media (prefers-color-scheme: dark) { body::after { opacity: 0.5; } }
   .wrap { max-width: 880px; margin: 0 auto; }
   .label {
     font-family: 'Martian Mono', monospace; font-size: 9.5px;
@@ -42,23 +60,28 @@
   .caption {
     font-family: 'Newsreader', serif; font-weight: 300; font-style: italic;
     font-size: 15px; color: var(--quiet); transition: color 0.4s ease, opacity 0.14s ease;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.35;
     flex: 1; min-width: 0;
   }
-  .caption.live { color: var(--ai); }
+  .caption.live { color: var(--ink); }
   header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 28px; }
   h1 { font-size: 26px; font-style: italic; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 420px)); justify-content: center; gap: 16px; }
   .card {
     position: relative; overflow: hidden; background: var(--card);
     border: 1px solid var(--hairline); border-radius: 24px; min-height: 300px;
     display: flex; flex-direction: column;
     box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 12px 40px rgba(0,0,0,0.05);
-    animation: rise 0.9s cubic-bezier(0.22,1,0.36,1) both;
+    animation: rise 0.9s var(--ease-out) both;
   }
+  .card--butter { background: linear-gradient(180deg, rgba(241,232,207,var(--edge)), rgba(241,232,207,0) 34%), var(--card); }
+  .card--sage   { background: linear-gradient(180deg, rgba(222,228,218,var(--edge)), rgba(222,228,218,0) 34%), var(--card); }
+  .card--lav    { background: linear-gradient(180deg, rgba(228,224,232,var(--edge)), rgba(228,224,232,0) 34%), var(--card); }
+  .card--blush  { background: linear-gradient(180deg, rgba(241,222,218,var(--edge)), rgba(241,222,218,0) 34%), var(--card); }
   .head, .foot { position: relative; padding: 28px; display: flex; justify-content: space-between; align-items: baseline; }
   .head { padding-bottom: 16px; }
-  .foot { gap: 12px; }
+  .head .label:first-child { color: var(--ink); opacity: 0.62; }
+  .foot { gap: 12px; padding-top: 18px; }
   .foot .label { flex-shrink: 0; }
   .body { position: relative; flex: 1; display: flex; align-items: stretch; padding: 0 28px; }
   /* numeral tops and chart bottoms line up across every card */
@@ -71,89 +94,93 @@
 
   @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
   @keyframes draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
-  .draw-path { stroke-dasharray: 1; animation: draw 1.8s cubic-bezier(0.22,1,0.36,1) 0.2s both; }
+  .draw-path { stroke-dasharray: 1; animation: draw 1.8s var(--ease-out) 0.2s both; }
   @keyframes fadeLate { 0%,40% { opacity: 0; } 100% { opacity: 1; } }
   .fade-late { animation: fadeLate 2.4s ease both; }
-  @keyframes rainfall { 0% { transform: translateY(-46px); opacity: 0; } 55% { opacity: 1; } 100% { transform: translateY(0); opacity: 1; } }
-  .stem { animation: rainfall 0.6s cubic-bezier(0.4,0,1,1) both; }
+  @keyframes rainfall { 0% { transform: translateY(-64px); opacity: 0; } 45% { opacity: 1; } 100% { transform: translateY(0); opacity: 1; } }
+  .bead { animation: rainfall 0.45s var(--ease-in) both; }
   @keyframes settle { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: none; } }
-  .runpt { animation: settle 0.35s cubic-bezier(0.4,0,1,1) both; cursor: pointer; }
+  .runpt { animation: settle 0.35s var(--ease-in) both; cursor: pointer; }
   @keyframes breatheR { 0%,100% { r: 3.5; } 50% { r: 5; } }
   .breathe-svg, .runpt .mark.today, .pt .mark.today { animation: breatheR 5s ease-in-out infinite; }
   @keyframes runDraw { from { stroke-dashoffset: 72.8; } to { stroke-dashoffset: 0; } }
-  .run-progress { stroke: var(--ai); stroke-dasharray: 72.8 100; animation: runDraw 1.6s cubic-bezier(0.22,1,0.36,1) 0.3s both; }
+  .run-progress { stroke: var(--ink); stroke-dasharray: 72.8 100; animation: runDraw 1.6s var(--ease-out) 0.3s both; }
   @keyframes march { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -18; } }
   .march { animation: march 1.2s ease-out; }
   @keyframes plumb { from { transform: scaleY(0); } to { transform: scaleY(1); } }
-  .plumb { animation: plumb 0.3s cubic-bezier(0.4,0,1,1) both; }
+  .plumb { animation: plumb 0.3s var(--ease-in) both; }
   @keyframes goalHello { 0% { r: 4; opacity: 0.7; } 100% { r: 13; opacity: 0; } }
-  .goal-echo { fill: none; stroke: var(--ai); stroke-width: 1.5; opacity: 0; animation: goalHello 1.4s ease-out 2.2s 1 both; }
+  .goal-echo { fill: none; stroke: var(--w-blush); stroke-width: 1.5; opacity: 0; animation: goalHello 1.4s ease-out 2.2s 1 both; }
 
   /* ink / indigo assignments (all theme-aware) */
   #ridgeLine { stroke: var(--ink); }
-  #pinLine { stroke: rgba(var(--ai-rgb), 0.5); transition: opacity 0.3s ease; }
+  #pinLine { stroke: rgba(var(--ink-rgb), 0.45); transition: opacity 0.3s ease; }
   .horizon { stroke: rgba(var(--ink-rgb), 0.12); }
-  #nightCurve { stroke: var(--ai); }
-  .wakedot, #scrubDot { fill: var(--ai); }
-  #scrubLine { stroke: rgba(var(--ai-rgb), 0.4); }
+  #nightCurve { stroke: var(--ink); }
+  #nightSvg { cursor: ew-resize; }
+  .wakedot, #scrubDot { fill: var(--ink); }
+  #scrubLine { stroke: rgba(var(--ink-rgb), 0.35); }
   #scrubLine, #scrubDot { transition: opacity 0.3s ease; }
   #routeGhost { stroke: rgba(var(--ink-rgb), 0.22); }
-  #tracePath { stroke: var(--ai); stroke-width: 2.5; opacity: 0; }
+  #tracePath { stroke: var(--w-blush); stroke-width: 5; stroke-opacity: 0.9; opacity: 0; }
   .start-dot { fill: var(--ink); }
   .goal-ring { fill: none; stroke: var(--ink); stroke-width: 1.5; opacity: 0.5; }
-  .runner { fill: var(--ai); stroke: var(--card); stroke-width: 1; }
-  .runpt .mark { fill: var(--ai); stroke: var(--card); stroke-width: 1.5; transition: r 0.3s ease; }
+  .runner { fill: var(--ink); stroke: var(--card); stroke-width: 1; }
+  .runpt .mark { fill: var(--ink); stroke: var(--card); stroke-width: 1.5; transition: r 0.3s ease; }
   .pt { cursor: pointer; }
   .pt .mark { fill: var(--card); stroke: var(--ink); stroke-width: 1.5; transition: r 0.3s ease, fill 0.3s ease, stroke 0.3s ease; }
-  .pt .mark.hot { fill: var(--ai); stroke: var(--ai); }
-  .s-ai-20 { stop-color: var(--ai); stop-opacity: 0.20; }
-  .s-ai-16 { stop-color: var(--ai); stop-opacity: 0.16; }
-  .s-ai-10 { stop-color: var(--ai); stop-opacity: 0.10; }
-  .s-ai-02 { stop-color: var(--ai); stop-opacity: 0.02; }
-  .s-ai-0  { stop-color: var(--ai); stop-opacity: 0; }
+  .pt .mark.hot { fill: var(--ink); stroke: var(--ink); }
+  .pt:hover .mark { r: 3.75px; }
+  .runpt:hover .mark { r: 4px; }
+  .w-butter { stop-color: var(--w-butter); } .w-sage { stop-color: var(--w-sage); }
+  .w-mist { stop-color: var(--w-mist); } .w-lav { stop-color: var(--w-lav); } .w-blush { stop-color: var(--w-blush); }
+  .s-hi { stop-opacity: var(--wash-hi); } .s-mid { stop-opacity: var(--wash-mid); }
+  .s-lo { stop-opacity: var(--wash-lo); } .s-0 { stop-opacity: 0; }
 
-  /* rain */
+  /* rain — one drop per session, pooled per day */
   .rainrow { display: flex; align-items: flex-end; gap: 4.5%; width: 100%; height: 92px; }
-  .rainbtn { position: relative; background: none; border: none; padding: 0; cursor: pointer; flex: 1; height: 100%; display: flex; align-items: flex-end; justify-content: center; }
-  .stem-el { position: relative; width: 1.5px; background: rgba(var(--ink-rgb), 0.35); border-radius: 1px; transition: background 0.3s ease; }
-  .stem-el.on { background: var(--ai); }
-  .stem-el::after {
-    content: ''; position: absolute; inset: 0; border-radius: 1px;
-    background: linear-gradient(180deg, var(--ai) 0%, rgba(var(--ai-rgb), 0.35) 100%);
-    transform: scaleY(0); transform-origin: top center;
-    transition: transform 0.3s cubic-bezier(0.22,1,0.36,1);
-    pointer-events: none;
-  }
-  .rainbtn:hover .stem-el::after, .rainbtn:focus-visible .stem-el::after {
-    transform: scaleY(1);
-    transition: transform 0.3s cubic-bezier(0.4,0,1,1);
-  }
-  .droplet { position: absolute; left: 50%; top: -3px; width: 3.5px; height: 3.5px; transform: translateX(-50%); border-radius: 50%; background: var(--ai); animation: drop cubic-bezier(0.4,0,1,1) both; pointer-events: none; z-index: 1; }
-  @keyframes drop { from { top: -3px; } to { top: calc(100% - 3px); } }
-  .splash { position: absolute; left: 50%; bottom: -1px; width: 4px; height: 1.5px; border-radius: 50%; background: var(--ai); animation: splash 0.4s ease-out both; pointer-events: none; z-index: 1; }
-  @keyframes splash { from { transform: translateX(-50%) scaleX(1); opacity: 0.9; } to { transform: translateX(-50%) scaleX(3.2); opacity: 0; } }
-  .tipdot { position: absolute; top: -3px; left: 50%; width: 4.5px; height: 4.5px; border-radius: 50%; background: var(--ai); animation: breatheDot 5s ease-in-out infinite; pointer-events: none; z-index: 1; }
-  .tipdot.hidden { display: none; }
-  .tipdot.reform { animation: beadForm 0.45s ease-out both, breatheDot 5s ease-in-out 0.45s infinite; }
-  @keyframes breatheDot { 0%,100% { transform: translateX(-50%) scale(1); opacity: 1; } 50% { transform: translateX(-50%) scale(1.45); opacity: 0.55; } }
-  @keyframes beadForm { from { transform: translateX(-50%) scale(0); opacity: 0; } to { transform: translateX(-50%) scale(1); opacity: 1; } }
+  .rainbtn { position: relative; background: none; border: none; padding: 0; cursor: pointer; flex: 1; height: 100%;
+    display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 3px; }
+  .bead { position: relative; width: 4.5px; height: 4.5px; border-radius: 50%;
+    background: rgba(var(--ink-rgb), 0.75); transition: background 0.25s ease; }
+  .rainbtn.on .bead, .rainbtn.today .bead { background: var(--ink); }
+  .rainbtn:hover .bead, .rainbtn:focus-visible .bead { background: var(--ink); }
+  .rest-ring { width: 5px; height: 5px; border-radius: 50%; border: 1px solid var(--hairline); background: transparent; }
+  .bead.breathe { animation: rainfall 0.45s var(--ease-in) both, beadBreathe 5s ease-in-out infinite; }
+  @keyframes beadBreathe { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.4); opacity: 0.55; } }
+  .bead.hop { animation: hop 0.3s cubic-bezier(0.35,0,0.65,1); }
+  @keyframes hop { 0% { transform: translateY(0); } 40% { transform: translateY(-7px); } 100% { transform: translateY(0); } }
+  .plip { position: absolute; inset: -3px; border-radius: 50%; border: 1px solid var(--ink);
+    animation: plipOut 0.4s ease-out 0.26s both; pointer-events: none; }
+  @keyframes plipOut { from { transform: scale(0.6); opacity: 0.8; } to { transform: scale(2.4); opacity: 0; } }
 
-  button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--ai); outline-offset: 3px; border-radius: 8px; }
+  button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; border-radius: 8px; }
   /* the browser's own tap/focus paint (gold on some Android browsers) — ours is the indigo ring above */
   * { -webkit-tap-highlight-color: transparent; }
   button:focus:not(:focus-visible), [tabindex]:focus:not(:focus-visible), svg:focus:not(:focus-visible) { outline: none; }
   .card, .card svg { -webkit-user-select: none; user-select: none; }
 
   @media (prefers-reduced-motion: reduce) {
-    .card, .draw-path, .fade-late, .stem, .runpt, .run-progress, .breathe-svg,
-    .runpt .mark.today, .pt .mark.today, .march, .droplet, .splash, .plumb,
-    .tipdot, .goal-echo { animation: none !important; opacity: 1; }
+    .card, .draw-path, .fade-late, .bead, .bead.breathe, .bead.hop, .plip, .runpt, .run-progress, .breathe-svg,
+    .runpt .mark.today, .pt .mark.today, .march, .plumb,
+    .goal-echo { animation: none !important; opacity: 1; }
     .draw-path { stroke-dasharray: none; }
     .goal-echo { opacity: 0 !important; }
   }
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <filter id="grainF" x="-2%" y="-2%" width="104%" height="104%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch" result="t"/>
+      <feColorMatrix in="t" type="saturate" values="0" result="g"/>
+      <feComponentTransfer in="g" result="gA"><feFuncA type="linear" slope="0.4" intercept="0"/></feComponentTransfer>
+      <feComposite in="gA" in2="SourceAlpha" operator="in" result="grains"/>
+      <feBlend in="grains" in2="SourceGraphic" mode="soft-light"/>
+    </filter>
+  </defs>
+</svg>
 <div class="wrap">
   <header>
     <h1>measures</h1><span class="label">Without thought</span>
@@ -162,24 +189,24 @@
   <div class="grid">
 
     <!-- RIDGE · deep work -->
-    <div class="card" style="animation-delay:0s">
+    <div class="card card--butter" style="animation-delay:0s">
       <div class="head"><span class="label">Deep work</span><span class="label">7 days</span></div>
       <div class="body">
         <div class="metric-col">
-          <span class="numeral metric-num">24.6<span class="soft"> h this week</span></span>
+          <span class="numeral metric-num">24.6<span class="soft"> h</span></span>
           <div>
             <svg id="ridgeSvg" viewBox="0 0 300 100" style="width:100%" aria-label="Deep work hours over seven days. Tap or focus a day to compare it with the weekly average.">
               <defs>
                 <linearGradient id="ridgeMist" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" class="s-ai-16"/><stop offset="100%" class="s-ai-0"/>
+                  <stop offset="0%" class="w-butter s-hi"/><stop offset="100%" class="w-butter s-0"/>
                 </linearGradient>
               </defs>
-              <path id="ridgeFill" fill="url(#ridgeMist)" class="fade-late"/>
+              <path id="ridgeFill" fill="url(#ridgeMist)" class="fade-late" filter="url(#grainF)"/>
               <path id="ridgeLine" fill="none" stroke-width="1.5" stroke-linecap="round" pathLength="1" class="draw-path"/>
               <line id="pinLine" stroke-width="1" opacity="0"/>
               <g id="ridgePts"></g>
             </svg>
-            <div class="hour-row"><span>mon</span><span>sun</span></div>
+            <div class="hour-row" style="padding: 0 3.3%"><span>mon</span><span>sun</span></div>
           </div>
         </div>
       </div>
@@ -187,7 +214,7 @@
     </div>
 
     <!-- RAIN · sessions -->
-    <div class="card" style="animation-delay:0.12s">
+    <div class="card card--sage" style="animation-delay:0.12s">
       <div class="head"><span class="label">Sessions</span><span class="label">14 days</span></div>
       <div class="body">
         <div class="metric-col">
@@ -202,7 +229,7 @@
     </div>
 
     <!-- NIGHT · sleep -->
-    <div class="card" style="animation-delay:0.24s">
+    <div class="card card--lav" style="animation-delay:0.24s">
       <div class="head"><span class="label">Sleep</span><span class="label">Last night</span></div>
       <div class="body">
         <div class="metric-col">
@@ -212,16 +239,16 @@
               aria-label="Sleep depth through the night as a valley. Drag across it, or use arrow keys, to read the time and depth.">
               <defs>
                 <linearGradient id="nightSky" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" class="s-ai-0"/><stop offset="35%" class="s-ai-10"/>
-                  <stop offset="55%" class="s-ai-10"/><stop offset="100%" class="s-ai-0"/>
+                  <stop offset="0%" class="w-lav s-0"/><stop offset="35%" class="w-lav s-hi"/>
+                  <stop offset="55%" class="w-lav s-hi"/><stop offset="100%" class="w-lav s-0"/>
                 </linearGradient>
                 <linearGradient id="restFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" class="s-ai-20"/><stop offset="100%" class="s-ai-02"/>
+                  <stop offset="0%" class="w-mist s-hi"/><stop offset="100%" class="w-mist s-lo"/>
                 </linearGradient>
               </defs>
-              <rect x="0" y="0" width="300" height="76" rx="6" fill="url(#nightSky)" class="fade-late"/>
+              <rect x="0" y="0" width="300" height="76" rx="6" fill="url(#nightSky)" class="fade-late" filter="url(#grainF)"/>
               <line class="horizon" x1="0" y1="14" x2="300" y2="14" stroke-width="1"/>
-              <path class="fade-late" fill="url(#restFill)"
+              <path class="fade-late" fill="url(#restFill)" filter="url(#grainF)"
                 d="M 51.6 14 C 70 44, 84 64, 104 64 C 124 64, 130 40, 146 40 C 162 40, 168 60, 186 60 C 208 60, 226 34, 240 14 Z"/>
               <path id="nightCurve" class="draw-path" fill="none" stroke-width="1.5" stroke-linecap="round" pathLength="1"
                 d="M 51.6 14 C 70 44, 84 64, 104 64 C 124 64, 130 40, 146 40 C 162 40, 168 60, 186 60 C 208 60, 226 34, 240 14"/>
@@ -237,7 +264,7 @@
     </div>
 
     <!-- ROAD · running -->
-    <div class="card" style="animation-delay:0.36s">
+    <div class="card card--blush" style="animation-delay:0.36s">
       <div class="head"><span class="label">Running</span><span class="label">This week</span></div>
       <div class="body">
         <div class="metric-col">
@@ -252,7 +279,7 @@
                 d="M 8 62 C 50 22, 95 88, 145 50 C 185 22, 215 80, 292 42"/>
               <g id="runPts"></g>
             </svg>
-            <div class="hour-row"><span>0</span><span>25 km</span></div>
+            <div class="hour-row" style="padding: 0 2.7%"><span>0</span><span>25 km</span></div>
           </div>
         </div>
       </div>
@@ -350,8 +377,8 @@
   }
   ridgeRender();
 
-  /* —— RAIN —— */
-  var rnVals = [3,5,2,0,4,6,3,1,4,5,2,6,3,4], rnSel = null, rnMax = 6;
+  /* —— RAIN —— one bead per session; the count is the chart */
+  var rnVals = [3,5,2,0,4,6,3,1,4,5,2,6,3,4], rnSel = null;
   var row = document.getElementById('rainRow'), rainCap = document.getElementById('rainCap');
   function rnDay(i){
     var dt = new Date(); dt.setDate(dt.getDate() - (rnVals.length-1-i));
@@ -359,56 +386,52 @@
   }
   document.getElementById('rainStart').textContent = rnDay(0);
   function rainDefault(){
-    return invited.rain ? '3.4 a day — a steady fortnight' : 'tap a stem to read its day';
+    return invited.rain ? '3.4 a day — a steady fortnight' : 'tap a day to read it';
   }
-  var tipEl = null;
   rnVals.forEach(function(v,i){
     var b = document.createElement('button'); b.className='rainbtn';
-    b.setAttribute('aria-label', rnDay(i)+', '+v+' sessions');
-    var s = document.createElement('div'); s.className='stem stem-el';
-    s.style.height = Math.max(v/rnMax*100, 3)+'%';
-    s.style.animationDelay = (i*0.05)+'s';
-    b.appendChild(s); row.appendChild(b);
+    b.setAttribute('aria-label', rnDay(i)+', '+v+' session'+(v===1?'':'s'));
+    if (v === 0){
+      var ring = document.createElement('span'); ring.className='rest-ring';
+      b.appendChild(ring);
+    } else {
+      /* beads pool bottom-up: DOM top-to-bottom is stack top-to-bottom */
+      for (var k = v - 1; k >= 0; k--){
+        var bead = document.createElement('span'); bead.className='bead';
+        /* bottom bead lands first; higher beads follow */
+        bead.style.animationDelay = (i*0.05 + k*0.07) + 's';
+        /* hover cascade pours top-down */
+        bead.style.transitionDelay = ((v-1-k) * 0.045) + 's';
+        b.appendChild(bead);
+      }
+    }
+    row.appendChild(b);
     b.addEventListener('click', function(){
       invited.rain = true;
       rnSel = (rnSel===i)?null:i;
       if (rnSel===i && v > 0){
-        var drop = document.createElement('span'); drop.className='droplet';
-        var hPx = s.getBoundingClientRect().height;
-        var dur = 0.22 + Math.sqrt(hPx / 92) * 0.30;
-        drop.style.animationDuration = dur.toFixed(2) + 's';
-        var isToday = (i === rnVals.length - 1);
-        if (isToday && tipEl){ tipEl.classList.remove('reform'); tipEl.classList.add('hidden'); }
-        s.appendChild(drop);
-        setTimeout(function(){
-          drop.remove();
-          var sp = document.createElement('span'); sp.className='splash';
-          s.appendChild(sp);
-          setTimeout(function(){ sp.remove(); }, 450);
-          if (isToday && tipEl){
-            setTimeout(function(){
-              tipEl.classList.remove('hidden');
-              tipEl.classList.add('reform');
-            }, 700);
-          }
-        }, dur * 1000);
+        var top = b.firstChild; /* top of the stack */
+        top.classList.remove('hop'); void top.getBoundingClientRect(); top.classList.add('hop');
+        var ring2 = document.createElement('span'); ring2.className='plip';
+        top.appendChild(ring2);
+        setTimeout(function(){ ring2.remove(); top.classList.remove('hop'); }, 700);
       }
       rainRender();
     });
   });
   function rainRender(){
     Array.prototype.forEach.call(row.children, function(b,i){
-      b.firstChild.classList.toggle('on', rnSel===i || (rnSel===null && i===rnVals.length-1));
+      b.classList.toggle('on', rnSel===i);
+      b.classList.toggle('today', rnSel===null && i===rnVals.length-1);
+      var top = b.firstChild;
+      if (top && top.classList.contains('bead')){
+        top.classList.toggle('breathe', rnSel===null && i===rnVals.length-1);
+      }
     });
     if (rnSel===null){ setCap(rainCap, rainDefault(), false); }
     else { setCap(rainCap, rnDay(rnSel) + ' — ' + rnVals[rnSel] + ' session' + (rnVals[rnSel]===1?'':'s'), true); }
   }
   rainRender();
-  (function(){
-    var lastStem = row.children[rnVals.length - 1].firstChild;
-    tipEl = document.createElement('span'); tipEl.className = 'tipdot';
-    lastStem.appendChild(tipEl);
-  })();
 
   /* —— NIGHT —— */
   var nightSvg = document.getElementById('nightSvg');
@@ -450,6 +473,8 @@
     scrubDot.setAttribute('cx', best.x); scrubDot.setAttribute('cy', best.y);
     scrubDot.setAttribute('opacity', 1);
     setCapNow(nightCap, nightTime(best.x) + ' — ' + depthWord(best.y) + ' sleep', true);
+    nightSvg.setAttribute('aria-valuenow', Math.round(best.x));
+    nightSvg.setAttribute('aria-valuetext', nightTime(best.x) + ', ' + depthWord(best.y) + ' sleep');
   }
   function scrubEnd(){
     kbX = null;
@@ -468,6 +493,9 @@
   });
   nightSvg.addEventListener('pointerup', scrubEnd);
   nightSvg.addEventListener('pointerleave', scrubEnd);
+  nightSvg.setAttribute('aria-valuemin', '0');
+  nightSvg.setAttribute('aria-valuemax', '300');
+  nightSvg.setAttribute('aria-valuenow', '146');
   var kbX = null;
   nightSvg.addEventListener('keydown', function(e){
     if (e.key === 'ArrowRight' || e.key === 'ArrowLeft'){

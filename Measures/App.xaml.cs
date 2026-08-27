@@ -1,5 +1,6 @@
 using System;
 using Microsoft.Extensions.Logging;
+using Measures.Controls;
 using Measures.Theming;
 using Uno.Resizetizer;
 
@@ -47,10 +48,32 @@ public partial class App : Application
             rootFrame.Navigate(typeof(MeasuresPage), args.Arguments);
         }
 
+        // grain is material, not decoration: it is the plaster the field is
+        // made of, so the asset is touched once here and reports itself
+        GrainLayer.EnsureAsset();
+
+#if DEBUG
+        // The dark scheme is otherwise only reachable by changing a Windows
+        // setting, which a capture run cannot do. MEASURES_THEME=dark|light
+        // pins it so both schemes can be photographed from one harness.
+        if (Environment.GetEnvironmentVariable("MEASURES_THEME") is { Length: > 0 } forced)
+        {
+            rootFrame.RequestedTheme = forced.Equals("dark", StringComparison.OrdinalIgnoreCase)
+                ? ElementTheme.Dark
+                : ElementTheme.Light;
+        }
+#endif
+
         // Custom token keys resolve unreliably inside ThemeDictionaries, so the
         // scheme is applied by re-colouring the shared brush instances instead.
         Palette.Apply(rootFrame.ActualTheme);
         rootFrame.ActualThemeChanged += (sender, _) => Palette.Apply(sender.ActualTheme);
+
+        // The field is meant to run to the edge of the glass, but every colour
+        // on AppWindowTitleBar is Uno0001 not-implemented on the targets this
+        // app builds, so the chrome stays system-drawn for now. Carried, not
+        // forgotten: see DELTA-behavior, "Browser/system chrome joins the field".
+
 
         MainWindow.SetWindowIcon();
         // Ensure the current window is active

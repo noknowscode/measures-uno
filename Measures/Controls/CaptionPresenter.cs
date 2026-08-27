@@ -11,7 +11,10 @@ namespace Measures.Controls;
 /// The one line each card speaks with. It owns the 140 ms fade-swap, the
 /// stale-write token that keeps a slow swap from overwriting a fast one, and
 /// the invitation: the caption teaches its gesture once, then summarises.
-/// Readings never resize the card, so the text never wraps and never grows.
+///
+/// A live reading signals by weight of colour - quiet taupe up to full charcoal
+/// - never by hue. Readings never resize the card, so the text never wraps,
+/// never grows, and a line too long for the box ellipses instead.
 /// </summary>
 public sealed partial class CaptionPresenter : Control
 {
@@ -87,7 +90,7 @@ public sealed partial class CaptionPresenter : Control
             return;
         }
 
-        Anim.Animate(_text, "Opacity", null, 0, SwapMs, Anim.Ease, completed: () =>
+        Anim.Animate(_text, "Opacity", null, 0, SwapMs, Anim.EaseHands, completed: () =>
         {
             if (token != _token)
             {
@@ -96,7 +99,7 @@ public sealed partial class CaptionPresenter : Control
 
             CurrentText = text;
             _text.Text = text;
-            Anim.Animate(_text, "Opacity", null, 1, SwapMs, Anim.Ease);
+            Anim.Animate(_text, "Opacity", null, 1, SwapMs, Anim.EaseHands);
             AnnounceChange();
         });
     }
@@ -113,12 +116,12 @@ public sealed partial class CaptionPresenter : Control
         Anim.AnimateColor(
             _brush,
             "Color",
-            Palette.Get(live ? Palette.Token.Ai : Palette.Token.Quiet),
+            Palette.Get(live ? Palette.Token.Ink : Palette.Token.Quiet),
             400);
     }
 
     void OnRecoloured(object? sender, EventArgs e) =>
-        _brush.Color = Palette.Get(_live ? Palette.Token.Ai : Palette.Token.Quiet);
+        _brush.Color = Palette.Get(_live ? Palette.Token.Ink : Palette.Token.Quiet);
 
     void AnnounceChange()
     {

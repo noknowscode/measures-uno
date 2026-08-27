@@ -1,15 +1,33 @@
 using Measures.Motion;
+using Measures.Theming;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Documents;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Shapes;
 
 namespace Measures.Controls;
+
+/// <summary>
+/// The temperature of light a card is lit by. One per instrument - four rooms
+/// lit differently, and the only place colour is allowed on the page.
+/// </summary>
+public enum Temperature
+{
+    Butter,
+    Sage,
+    Lavender,
+    Blush,
+}
 
 /// <summary>
 /// The device face every measure sits in. It owns all the chrome, so the four
 /// charts only ever draw their plot: numeral tops and chart bottoms are the two
 /// horizontals shared across the bench, and they line up because this control
 /// decides them, not the charts.
+///
+/// It also owns the room's light: the chart names a <see cref="Temperature"/>
+/// and the card renders it as a wash descending from its top edge. The chart
+/// never paints its own edge light.
 /// </summary>
 public sealed partial class MeasureCard : ContentControl
 {
@@ -38,7 +56,36 @@ public sealed partial class MeasureCard : ContentControl
     public static readonly DependencyProperty RiseDelayProperty = DependencyProperty.Register(
         nameof(RiseDelay), typeof(double), typeof(MeasureCard), new PropertyMetadata(0d));
 
+    /// <summary>The temperature of light this room is lit by.</summary>
+    public static readonly DependencyProperty TemperatureProperty = DependencyProperty.Register(
+        nameof(Temperature), typeof(Temperature), typeof(MeasureCard),
+        new PropertyMetadata(Temperature.Butter, OnTemperatureChanged));
+
+    /// <summary>
+    /// How far the axis whispers are pulled in from the plot's edges, as a
+    /// fraction of its width. The ends sit under the first and last data point
+    /// rather than under the box, which is where the eye reads them from.
+    /// </summary>
+    public static readonly DependencyProperty AxisInsetProperty = DependencyProperty.Register(
+        nameof(AxisInset), typeof(double), typeof(MeasureCard), new PropertyMetadata(0d, OnAxisChanged));
+
     readonly TranslateTransform _rise = new();
+
+    /// <summary>
+    /// The edge light, built here rather than in the dictionary: every card is
+    /// a different temperature, so the brush cannot be a shared resource.
+    /// </summary>
+    readonly LinearGradientBrush _edgeLight = new()
+    {
+        StartPoint = new Point(0, 0),
+        EndPoint = new Point(0, 1),
+        GradientStops =
+        {
+            new GradientStop { Offset = 0 },
+            new GradientStop { Offset = 0.45 },
+            new GradientStop { Offset = 1 },
+        },
+    };
 
     FrameworkElement? _riseHost;
     TextBlock? _numeral;
@@ -50,6 +97,9 @@ public sealed partial class MeasureCard : ContentControl
     public MeasureCard()
     {
         DefaultStyleKey = typeof(MeasureCard);
+
+        LightTheRoom();
+        Palette.Recoloured += OnRecoloured;
 
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
@@ -104,6 +154,18 @@ public sealed partial class MeasureCard : ContentControl
         set => SetValue(RiseDelayProperty, value);
     }
 
+    public Temperature Temperature
+    {
+        get => (Temperature)GetValue(TemperatureProperty);
+        set => SetValue(TemperatureProperty, value);
+    }
+
+    public double AxisInset
+    {
+        get => (double)GetValue(AxisInsetProperty);
+        set => SetValue(AxisInsetProperty, value);
+    }
+
     public CaptionPresenter? Caption { get; private set; }
 
     /// <summary>Line box for the axis row, at the 8.5 epx whisper size.</summary>
@@ -114,6 +176,14 @@ public sealed partial class MeasureCard : ContentControl
         base.OnApplyTemplate();
 
         _riseHost = GetTemplateChild("PART_Rise") as FrameworkElement;
+
+        // the template supplies the layer; the card supplies the light, because
+        // each room is a different temperature and so cannot share a brush
+        if (GetTemplateChild("PART_EdgeLight") is Shape edge)
+        {
+            edge.Fill = _edgeLight;
+        }
+
         _numeral = GetTemplateChild("PART_Numeral") as TextBlock;
         _axis = GetTemplateChild("PART_Axis") as Canvas;
 
@@ -154,6 +224,33 @@ public sealed partial class MeasureCard : ContentControl
 
     static void OnAxisChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) =>
         ((MeasureCard)d).BuildAxis();
+
+    static void OnTemperatureChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) =>
+        ((MeasureCard)d).LightTheRoom();
+
+    static Palette.Token TokenFor(Temperature temperature) => temperature switch
+    {
+        Temperature.Sage => Palette.Token.Sage,
+        Temperature.Lavender => Palette.Token.Lavender,
+        Temperature.Blush => Palette.Token.Blush,
+        _ => Palette.Token.Butter,
+    };
+
+    /// <summary>
+    /// The wash descending from the top edge. Never animated: a temperature is
+    /// a room, not an effect, and a wash that moves has become a blob.
+    /// </summary>
+    void LightTheRoom()
+    {
+        var token = TokenFor(Temperature);
+        var edge = Palette.Intensity(Palette.Wash.Edge);
+
+        _edgeLight.GradientStops[0].Color = Palette.Get(token, edge);
+        _edgeLight.GradientStops[1].Color = Palette.Get(token, edge * 0.25);
+        _edgeLight.GradientStops[2].Color = Palette.Get(token, 0d);
+    }
+
+    void OnRecoloured(object? sender, EventArgs e) => LightTheRoom();
 
     void AttachSource()
     {
@@ -210,8 +307,8 @@ public sealed partial class MeasureCard : ContentControl
 
         _risen = true;
 
-        Anim.Animate(_riseHost, "Opacity", 0, 1, 900, Anim.Hands, RiseDelay);
-        Anim.Animate(_rise, "Y", 14, 0, 900, Anim.Hands, RiseDelay);
+        Anim.Animate(_riseHost, "Opacity", 0, 1, 900, Anim.EaseHands, RiseDelay);
+        Anim.Animate(_rise, "Y", 14, 0, 900, Anim.EaseHands, RiseDelay);
     }
 
     /// <summary>
@@ -223,6 +320,8 @@ public sealed partial class MeasureCard : ContentControl
 
     void OnUnloaded(object sender, RoutedEventArgs e)
     {
+        Palette.Recoloured -= OnRecoloured;
+
         if (_source is not null)
         {
             _source.ReadingChanged -= OnReadingChanged;
@@ -309,16 +408,21 @@ public sealed partial class MeasureCard : ContentControl
 
         var last = _axis.Children.Count - 1;
 
+        // the run the whispers describe is the data, not the box: pulling the
+        // ends in by the inset puts them under the first and last point
+        var inset = Math.Clamp(AxisInset, 0, 0.25) * width;
+        var run = width - 2 * inset;
+
         for (var i = 0; i <= last; i++)
         {
             var label = (FrameworkElement)_axis.Children[i];
 
             label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
 
-            // the ends sit flush, everything between is centred on its tick
+            // the ends sit flush to the run, everything between is centred on its tick
             var fraction = last == 0 ? 0 : (double)i / last;
 
-            Canvas.SetLeft(label, fraction * width - label.DesiredSize.Width * fraction);
+            Canvas.SetLeft(label, inset + fraction * run - label.DesiredSize.Width * fraction);
         }
     }
 }

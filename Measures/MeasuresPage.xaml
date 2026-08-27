@@ -40,6 +40,9 @@
         </VisualStateGroup>
     </VisualStateManager.VisualStateGroups>
 
+    <!-- a whisper of grain over the whole field, under everything on it -->
+    <controls:GrainLayer Opacity="0.18" />
+
     <ScrollViewer
         x:Name="Scroll"
         HorizontalScrollMode="Disabled"
@@ -49,7 +52,7 @@
         <Grid x:Name="Pad" Padding="20">
             <Grid
                 x:Name="Wrap"
-                MaxWidth="880"
+                MaxWidth="856"
                 HorizontalAlignment="Stretch">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -111,11 +114,13 @@
                         Grid.Row="0"
                         Grid.Column="0"
                         Grid.ColumnSpan="2"
+                        AxisInset="0.033"
                         AxisLabels="mon, sun"
                         FootRight="hours"
                         HeadLeft="Deep work"
                         HeadRight="7 days"
-                        RiseDelay="0">
+                        RiseDelay="0"
+                        Temperature="Butter">
                         <charts:RidgeChart x:Name="Ridge" />
                     </controls:MeasureCard>
 
@@ -127,7 +132,8 @@
                         FootRight="focus"
                         HeadLeft="Sessions"
                         HeadRight="14 days"
-                        RiseDelay="120">
+                        RiseDelay="120"
+                        Temperature="Sage">
                         <charts:RainChart x:Name="Rain" />
                     </controls:MeasureCard>
 
@@ -140,7 +146,8 @@
                         FootRight="restful"
                         HeadLeft="Sleep"
                         HeadRight="Last night"
-                        RiseDelay="240">
+                        RiseDelay="240"
+                        Temperature="Lavender">
                         <charts:NightChart x:Name="Night" />
                     </controls:MeasureCard>
 
@@ -149,10 +156,12 @@
                         Grid.Row="3"
                         Grid.Column="0"
                         Grid.ColumnSpan="2"
+                        AxisInset="0.027"
                         AxisLabels="0, 25 km"
                         HeadLeft="Running"
                         HeadRight="This week"
-                        RiseDelay="360">
+                        RiseDelay="360"
+                        Temperature="Blush">
                         <charts:RoadChart x:Name="Road" />
                     </controls:MeasureCard>
 

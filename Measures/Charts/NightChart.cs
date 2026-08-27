@@ -1,7 +1,10 @@
 using Measures.Controls;
 using Measures.Data;
 using Measures.Motion;
+using Microsoft.UI.Input;
 using Microsoft.UI.Xaml.Automation;
+using Microsoft.UI.Xaml.Automation.Peers;
+using Microsoft.UI.Xaml.Automation.Provider;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
@@ -10,9 +13,14 @@ using Path = Microsoft.UI.Xaml.Shapes.Path;
 namespace Measures.Charts;
 
 /// <summary>
-/// A night as a valley. The gesture is <em>scrub</em>: press and wander, and the
-/// caption reads the clock and the depth under your finger. This is the one
-/// place the whole curve is indigo - a single night is all living.
+/// A night as a valley, lit lavender above and mist-blue below - dusk. The
+/// gesture is <em>scrub</em>: press and wander, and the caption reads the clock
+/// and the depth under your finger. The curve itself is charcoal like every
+/// other line on the page; the night is told by the light around it, not by
+/// colouring the data.
+///
+/// To a screen reader it is a slider, not a picture: minimum, maximum, a live
+/// value, and a value text that says what the value means ("2:10, deep sleep").
 /// </summary>
 public sealed partial class NightChart : ChartBase
 {
@@ -49,6 +57,10 @@ public sealed partial class NightChart : ChartBase
     bool _scrubbing;
     double? _keyX;
 
+    // what the slider currently reads, in both the machine's terms and a person's
+    double _value;
+    string _valueText = string.Empty;
+
     public NightChart()
     {
         DefaultStyleKey = typeof(NightChart);
@@ -73,6 +85,9 @@ public sealed partial class NightChart : ChartBase
         KeyDown += OnKeyDown;
         LostFocus += (_, _) => EndScrub();
 
+        // the chart advertises its gesture before anyone tries it
+        ProtectedCursor = InputSystemCursor.Create(InputSystemCursorShape.SizeWestEast);
+
         Unloaded += (_, _) => _breath?.Dispose();
     }
 
@@ -80,6 +95,26 @@ public sealed partial class NightChart : ChartBase
     {
         get => (SleepNight?)GetValue(ChartDataProperty);
         set => SetValue(ChartDataProperty, value);
+    }
+
+    /// <summary>Where through the night the reader is, 0 to 1.</summary>
+    internal double Value => _value;
+
+    /// <summary>What that position means, in the same words the caption uses.</summary>
+    internal string ValueText => _valueText;
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new NightAutomationPeer(this);
+
+    /// <summary>Drives the scrub from assistive tech, in the peer's 0-to-1 terms.</summary>
+    internal void ScrubToFraction(double fraction)
+    {
+        if (PlotWidth <= 0)
+        {
+            return;
+        }
+
+        _keyX = Math.Clamp(fraction, 0, 1) * PlotWidth;
+        ScrubTo(_keyX.Value);
     }
 
     protected override void OnApplyTemplate()
@@ -199,7 +234,7 @@ public sealed partial class NightChart : ChartBase
     {
         if (_curve is not null && PlotWidth > 0)
         {
-            DrawIn(_curve, PlotWidth, PlotHeight, 1800, 200, Anim.Hands);
+            DrawIn(_curve, PlotWidth, PlotHeight, 1800, 200, Anim.EaseHands);
         }
 
         if (_sky is not null)
@@ -374,7 +409,7 @@ public sealed partial class NightChart : ChartBase
             var clamped = Math.Clamp(x, EdgeInset, width - EdgeInset);
 
             ShowScrub(new Point(clamped, HorizonY), showLine: false);
-            Publish(Reading.Preview($"{Format.Clock(data.At(clamped / width))} — awake"));
+            Announce(clamped / width, $"{Format.Clock(data.At(clamped / width))} — awake");
             return;
         }
 
@@ -382,8 +417,40 @@ public sealed partial class NightChart : ChartBase
         var depth = (point.Y - HorizonY) / Depth;
 
         ShowScrub(point, showLine: true);
-        Publish(Reading.Preview(
-            $"{Format.Clock(data.At(point.X / width))} — {DepthWord(depth)} sleep"));
+        Announce(
+            point.X / width,
+            $"{Format.Clock(data.At(point.X / width))} — {DepthWord(depth)} sleep");
+    }
+
+    /// <summary>
+    /// One reading, said twice: to the eye through the caption, and to the
+    /// machine as a range value plus the text that gives it meaning. UIA has no
+    /// direct counterpart to aria-valuetext, so the words ride on help text -
+    /// the one property a screen reader re-reads alongside a changed value.
+    /// </summary>
+    void Announce(double fraction, string text)
+    {
+        var previous = _value;
+
+        _value = Math.Clamp(fraction, 0, 1);
+        _valueText = text;
+
+        Publish(Reading.Preview(text));
+
+        if (FrameworkElementAutomationPeer.FromElement(this) is not { } peer)
+        {
+            return;
+        }
+
+        try
+        {
+            peer.RaisePropertyChangedEvent(RangeValuePatternIdentifiers.ValueProperty, previous, _value);
+            peer.RaisePropertyChangedEvent(AutomationElementIdentifiers.HelpTextProperty, string.Empty, text);
+        }
+        catch (NotImplementedException)
+        {
+            // not every target implements every identifier; the caption still speaks
+        }
     }
 
     void ShowScrub(Point at, bool showLine)
@@ -411,6 +478,7 @@ public sealed partial class NightChart : ChartBase
 
         _scrubbing = false;
         _keyX = null;
+        _valueText = string.Empty;
 
         if (_scrubDot is not null)
         {
@@ -423,5 +491,53 @@ public sealed partial class NightChart : ChartBase
         }
 
         PublishDefault();
+    }
+
+    /// <summary>
+    /// The night as a slider. Min and max are the ends of the plot rather than
+    /// the ends of the sleep, because the reader can wander past either edge of
+    /// the night and the chart still has something to say there.
+    /// </summary>
+    sealed class NightAutomationPeer(NightChart owner) : FrameworkElementAutomationPeer(owner), IRangeValueProvider
+    {
+        public bool IsReadOnly => false;
+
+        public double Minimum => 0;
+
+        public double Maximum => 1;
+
+        public double SmallChange => KeyStep;
+
+        public double LargeChange => KeyStep * 5;
+
+        public double Value => ((NightChart)Owner).Value;
+
+        public void SetValue(double value) => ((NightChart)Owner).ScrubToFraction(value);
+
+        protected override AutomationControlType GetAutomationControlTypeCore() => AutomationControlType.Slider;
+
+        protected override string GetClassNameCore() => nameof(NightChart);
+
+        /// <summary>The aria-valuetext stand-in: what the current value means.</summary>
+        protected override string GetHelpTextCore()
+        {
+            var owner = (NightChart)Owner;
+
+            return string.IsNullOrEmpty(owner.ValueText)
+                ? base.GetHelpTextCore() ?? string.Empty
+                : owner.ValueText;
+        }
+
+        protected override object GetPatternCore(PatternInterface pattern)
+        {
+            if (pattern == PatternInterface.RangeValue)
+            {
+                return this;
+            }
+
+            // the base returns null for patterns it does not serve, whatever
+            // the signature's annotation says
+            return base.GetPatternCore(pattern)!;
+        }
     }
 }

@@ -32,6 +32,15 @@
         <Setter Property="IsUpperCase" Value="True" />
     </Style>
 
+    <!--
+      The head is two labels at two weights: the metric name is what the card
+      is, so it leads at 62% ink; the period beside it is a footnote and stays
+      quiet. Same size, same tracking - the hierarchy is carried by value only.
+    -->
+    <Style x:Key="LabelLeadStyle" TargetType="controls:SpacedText" BasedOn="{StaticResource LabelStyle}">
+        <Setter Property="Foreground" Value="{StaticResource InkLeadBrush}" />
+    </Style>
+
     <Style x:Key="AxisStyle" TargetType="controls:SpacedText" BasedOn="{StaticResource SpacedTextBase}">
         <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
         <Setter Property="FontSize" Value="{StaticResource AxisSize}" />
@@ -42,6 +51,21 @@
     <!-- ══ SpacedText ══ -->
 
 
+
+    <!-- ══ GrainLayer ══ -->
+
+    <Style TargetType="controls:GrainLayer">
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="controls:GrainLayer">
+                    <Canvas x:Name="PART_Tiles" IsHitTestVisible="False" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
 
     <!-- ══ CaptionPresenter ══ -->
 
@@ -57,6 +81,8 @@
                         FontFamily="{StaticResource SerifItalicFont}"
                         FontSize="{StaticResource CaptionSize}"
                         FontStyle="Italic"
+                        LineHeight="{StaticResource CaptionLineHeight}"
+                        LineStackingStrategy="BlockLineHeight"
                         TextWrapping="NoWrap"
                         TextTrimming="CharacterEllipsis" />
                 </ControlTemplate>
@@ -84,7 +110,7 @@
                             Height="{TemplateBinding FocusSize}"
                             IsHitTestVisible="False"
                             Opacity="0"
-                            Stroke="{StaticResource AiBrush}"
+                            Stroke="{StaticResource InkBrush}"
                             StrokeThickness="2" />
                         <Ellipse
                             x:Name="PART_Mark"
@@ -114,7 +140,7 @@
                             Opacity="0"
                             RadiusX="8"
                             RadiusY="8"
-                            Stroke="{StaticResource AiBrush}"
+                            Stroke="{StaticResource InkBrush}"
                             StrokeThickness="2" />
                         <!-- the beads are built in code; the ring spreads from where the top one lands -->
                         <Canvas x:Name="PART_Beads" IsHitTestVisible="False" />
@@ -124,7 +150,7 @@
                                 Width="4.5"
                                 Height="4.5"
                                 Opacity="0"
-                                Stroke="{StaticResource AiBrush}"
+                                Stroke="{StaticResource InkBrush}"
                                 StrokeThickness="1" />
                         </Canvas>
                     </Grid>
@@ -168,7 +194,7 @@
                         <Border
                             x:Name="FocusRing"
                             Margin="-3"
-                            BorderBrush="{StaticResource AiBrush}"
+                            BorderBrush="{StaticResource InkBrush}"
                             BorderThickness="2"
                             CornerRadius="999"
                             IsHitTestVisible="False"
@@ -179,12 +205,12 @@
                                 <VisualState x:Name="Normal" />
                                 <VisualState x:Name="PointerOver">
                                     <VisualState.Setters>
-                                        <Setter Target="Chrome.BorderBrush" Value="{StaticResource AiSoft40Brush}" />
+                                        <Setter Target="Chrome.BorderBrush" Value="{StaticResource InkSoft35Brush}" />
                                     </VisualState.Setters>
                                 </VisualState>
                                 <VisualState x:Name="Pressed">
                                     <VisualState.Setters>
-                                        <Setter Target="Chrome.BorderBrush" Value="{StaticResource AiSoft40Brush}" />
+                                        <Setter Target="Chrome.BorderBrush" Value="{StaticResource InkSoft35Brush}" />
                                         <!-- 0.98 is the house press for XAML; 0.96 is the web value -->
                                         <Setter Target="Press.ScaleX" Value="0.98" />
                                         <Setter Target="Press.ScaleY" Value="0.98" />
@@ -228,10 +254,11 @@
                             StrokeLineJoin="Round"
                             StrokeStartLineCap="Round"
                             StrokeThickness="1.5" />
+                        <!-- the plumb is contrast and position, never a hue -->
                         <Line
                             x:Name="PART_Pin"
                             Opacity="0"
-                            Stroke="{StaticResource AiSoft50Brush}"
+                            Stroke="{StaticResource InkSoft50Brush}"
                             StrokeThickness="1" />
                     </Canvas>
                 </ControlTemplate>
@@ -269,10 +296,12 @@
                             x:Name="PART_Horizon"
                             Stroke="{StaticResource InkSoft12Brush}"
                             StrokeThickness="1" />
-                        <Path x:Name="PART_Rest" Fill="{StaticResource RestFillBrush}" />
+                        <!-- mist-blue for the depth of the valley -->
+                        <Path x:Name="PART_Rest" Fill="{StaticResource NightValleyBrush}" />
+                        <!-- the night curve is data, so it is charcoal like all data -->
                         <Path
                             x:Name="PART_Curve"
-                            Stroke="{StaticResource AiBrush}"
+                            Stroke="{StaticResource InkBrush}"
                             StrokeEndLineCap="Round"
                             StrokeLineJoin="Round"
                             StrokeStartLineCap="Round"
@@ -281,18 +310,18 @@
                             x:Name="PART_Wake"
                             Width="7"
                             Height="7"
-                            Fill="{StaticResource AiBrush}" />
+                            Fill="{StaticResource InkBrush}" />
                         <Line
                             x:Name="PART_ScrubLine"
                             Opacity="0"
-                            Stroke="{StaticResource AiSoft40Brush}"
+                            Stroke="{StaticResource InkSoft35Brush}"
                             StrokeThickness="1" />
                         <Ellipse
                             x:Name="PART_ScrubDot"
                             Width="6"
                             Height="6"
                             Opacity="0"
-                            Fill="{StaticResource AiBrush}" />
+                            Fill="{StaticResource InkBrush}" />
                     </Canvas>
                 </ControlTemplate>
             </Setter.Value>
@@ -311,17 +340,21 @@
                             StrokeEndLineCap="Round"
                             StrokeStartLineCap="Round"
                             StrokeThickness="1" />
-                        <!-- the wake the runner leaves -->
+                        <!--
+                          The wake: late sun left on the road. Wide and soft and
+                          under the charcoal progress, so it reads as light the
+                          runner left behind rather than as a second line.
+                        -->
                         <Path
                             x:Name="PART_Trace"
                             Opacity="0"
-                            Stroke="{StaticResource AiBrush}"
+                            Stroke="{StaticResource BlushWakeBrush}"
                             StrokeEndLineCap="Round"
                             StrokeStartLineCap="Round"
-                            StrokeThickness="2.5" />
+                            StrokeThickness="6" />
                         <Path
                             x:Name="PART_Progress"
-                            Stroke="{StaticResource AiBrush}"
+                            Stroke="{StaticResource InkBrush}"
                             StrokeEndLineCap="Round"
                             StrokeStartLineCap="Round"
                             StrokeThickness="2" />
@@ -330,19 +363,20 @@
                             Width="4"
                             Height="4"
                             Fill="{StaticResource InkBrush}" />
+                        <!-- the finish line says hello once, in blush -->
                         <Ellipse
                             x:Name="PART_Echo"
                             Width="8"
                             Height="8"
                             Opacity="0"
-                            Stroke="{StaticResource AiBrush}"
+                            Stroke="{StaticResource BlushWakeBrush}"
                             StrokeThickness="1.5" />
                         <Ellipse
                             x:Name="PART_Runner"
                             Width="6"
                             Height="6"
                             Opacity="0"
-                            Fill="{StaticResource AiBrush}"
+                            Fill="{StaticResource InkBrush}"
                             Stroke="{StaticResource CardBrush}"
                             StrokeThickness="1" />
                     </Canvas>
@@ -355,6 +389,12 @@
 
     <Style TargetType="controls:MeasureCard">
         <Setter Property="MinHeight" Value="300" />
+        <!--
+          Kept from the prototype, where it stopped SVG strokes scaling. XAML
+          strokes are absolute so that risk does not transfer - the cap stays as
+          a composition constraint, and this note is here so nobody "fixes" it.
+        -->
+        <Setter Property="MaxWidth" Value="420" />
         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
         <Setter Property="VerticalContentAlignment" Value="Bottom" />
         <Setter Property="IsTabStop" Value="False" />
@@ -374,14 +414,28 @@
                                     <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
 
+                                <!--
+                                  The room's light, descending from the top edge.
+                                  Filled from code: every card is a different
+                                  temperature, so the brush cannot be shared.
+                                  RowSpan, because a layer that sat in row 0
+                                  would be as tall as the head and no taller.
+                                -->
+                                <Rectangle
+                                    x:Name="PART_EdgeLight"
+                                    Grid.RowSpan="3"
+                                    IsHitTestVisible="False"
+                                    RadiusX="23"
+                                    RadiusY="23" />
+
                                 <!-- head -->
-                                <Grid Padding="28,28,28,16">
+                                <Grid Grid.Row="0" Padding="28,28,28,16">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <controls:SpacedText
-                                        Style="{StaticResource LabelStyle}"
+                                        Style="{StaticResource LabelLeadStyle}"
                                         Text="{TemplateBinding HeadLeft}" />
                                     <controls:SpacedText
                                         Grid.Column="1"
@@ -418,7 +472,7 @@
                                 </Grid>
 
                                 <!-- foot -->
-                                <Grid Grid.Row="2" Padding="28" ColumnSpacing="12">
+                                <Grid Grid.Row="2" Padding="28,18,28,28" ColumnSpacing="12">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
