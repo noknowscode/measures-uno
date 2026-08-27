@@ -26,4 +26,9 @@
     </UnoFeatures>
   </PropertyGroup>
 
+  <!-- dotnet build -p:FrameWatch=true keeps the per-second frame log in a Release build, for measuring on a device -->
+  <PropertyGroup Condition="'$(FrameWatch)' == 'true'">
+    <DefineConstants>$(DefineConstants);FRAMEWATCH</DefineConstants>
+  </PropertyGroup>
+
 </Project>

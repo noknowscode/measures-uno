@@ -53,7 +53,7 @@ public sealed partial class MeasuresPage : Page
 
         Root.SizeChanged += (_, e) => Seat(e.NewSize.Width >= WideWidth);
 
-#if DEBUG
+#if FRAMEWATCH
         WatchFrames();
 #endif
 
@@ -96,27 +96,45 @@ public sealed partial class MeasuresPage : Page
 
     MeasureCard[] Cards => [RidgeCard, SessionsCard, NightCard, RoadCard];
 
-#if DEBUG
+#if FRAMEWATCH
     /// <summary>
-    /// Debug only: reports any frame that took more than two refreshes. This
-    /// is the one permanent Rendering subscription in the app, and it lives
-    /// only in Debug builds for exactly the reason it is otherwise forbidden.
+    /// Debug only (or -p:FrameWatch=true): a per-second frame summary. This is
+    /// the one permanent Rendering subscription in the app, and it lives
+    /// only in measuring builds for exactly the reason it is otherwise forbidden.
     /// </summary>
     void WatchFrames()
     {
         var clock = System.Diagnostics.Stopwatch.StartNew();
         var last = 0d;
+        var secondStart = 0d;
+        var frames = 0;
+        var over20 = 0;
+        var worst = 0d;
 
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering += (_, _) =>
         {
             var now = clock.Elapsed.TotalMilliseconds;
             var gap = now - last;
             last = now;
+            frames++;
 
-            if (gap > 34 && gap < 2000)
+            if (gap > 20 && gap < 2000)
             {
-                Console.WriteLine($"Measures: slow frame {gap:0} ms");
+                over20++;
             }
+
+            worst = Math.Max(worst, Math.Min(gap, 2000));
+
+            if (now - secondStart < 1000)
+            {
+                return;
+            }
+
+            Console.WriteLine($"Measures: fps={frames} over20={over20} worst={worst:0}ms");
+            secondStart = now;
+            frames = 0;
+            over20 = 0;
+            worst = 0;
         };
     }
 #endif
