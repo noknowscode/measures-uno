@@ -1,87 +1,56 @@
 # HANDOFF — Measures Uno port
-Updated: 2026-08-27
+Updated: 2026-08-27 11:50
 
 ## Where we are
 
-The ten delta briefs under `docs/deltas/` are implemented on `master`, on top of the
-Soft Materialism retheme (commit `f4d5756`). The page is still one `MeasuresPage` hosting
-four `MeasureCard`s; no MVUX/MVVM, no packages beyond the Uno.Sdk defaults.
+All ten delta briefs (`docs/deltas/`) are implemented on `master` on top of the Soft
+Materialism retheme; the app runs on desktop and on the Pixel 8. This session added the
+Android head (transparent status bar, self-padded inset), a phone carousel (one card at a
+time below 620 epx, `FlipView` + pips, night plot scrubs on press), a Dark/Light toggle, a
+fixed Replay (`Anim.Run` stops the previous HoldEnd board on the same target/property),
+cards that survive being re-seated (Loaded/Unloaded symmetric), per-tile grain opacity
+(no full-screen layer per frame), stadium pills (`CornerRadius` 14, since 999 goes oval on
+Skia), and an audit pass (dead members, unused brushes, scaffold usings, 0 warnings).
 
-What the delta pass changed:
-
-- **Sessions are a step line** (`StepChart`), per `DELTA-sessions-stepline`. The bead system
-  (`BeadColumn`, `RainChart`, hop/plip, `Anim.BeadHop`) is deleted. Hit zones are full-height
-  `DaySlot`s; peak is a hollow mark, today rides the line end and breathes, pin drops a plumb.
-- **Shared 300:120 plot box** (`ChartBase.DesignWidth/Height`), data at x 10–290 in every
-  chart, height follows width (`PlotHeight` is computed in `Layout`). Charts author in design
-  units and multiply by `Px`. Axis whispers default to the 3.3 % inset.
-- **Annotation layer**: `PointLabel` (date over value, clamped, flips below near the top) and
-  `HaloText` (3 epx card-coloured halo = 8 offset copies; XAML has no text stroke). Reference
-  rules are real dash geometry (`Curves.DashedRule`), labelled `AVG 3.5 H` / `AVG 3.4` / `GOAL 25`.
-- **Interpretation captions**: ridge/sessions selected → "+X % vs …average"; ridge default →
-  today's delta; sessions default → "+N vs prior week/fortnight"; road → "N km remaining";
-  night → "asleep … — awake …". Invitations still occupy the caption until first use.
-- **Range switchers** (`RangeSwitch`, a chromeless ButtonBase with a caret) on ridge and
-  sessions: 7↔14 days with real data (`SampleData.RidgeHistory` 14 days, `SessionsHistory`
-  28 days), numerals/axis/AVG/peak recompute, entrance replays.
-- **Metric hierarchy**: numeral 64 / unit 26 at 75 % Quiet (`UnitBrush`), metric column
-  top-anchored with a fixed 40 epx gap, hairline rule above every foot, axis whispers at 45 %
-  ink, references at 15 % (`ReferenceBrush`), road numeral is "18.2 km" (goal lives in chart).
-- **Tokens**: wash brushes carry semantic names (`AtmoEffort/Frequency/Rest/Depth/Distance`),
-  `Temperature` enum is semantic (Effort/Frequency/Rest/Distance), and `Palette.Verify` throws
-  at the first `Apply` if any expected key or gradient stop count is missing from `Tokens.xaml`.
-
-Since then (2026-08-27, on the Pixel 8 and desktop):
-
-- **Android** builds and runs on the Pixel 8 (`com.measures.app`). Status bar is transparent
-  with scheme-coloured icons; the page pads its own inset from `VisibleBounds`.
-- **Carousel below 620**: the four cards are re-seated from the 2x2 bench into a `FlipView`
-  with pips (`MeasuresPage.Seat`). In the carousel `NightChart.ScrubOnPress` claims the finger
-  on press, so the swipe lives on the rest of the card.
-- **Dark/Light button** in the header flips the window's root Frame (what `Palette` listens to).
-- **Replay** now really replays: `Anim.Run` stops the previous HoldEnd board on the same
-  target/property, or the held value masks the local `Opacity = 0` through the delay.
-- **Audit pass**: dead members and two unused brushes removed, scaffold `GlobalUsings` trimmed,
-  no hex outside `Tokens.xaml`, no narration comments, 0 warnings on both heads.
-
-Platform gaps carried from earlier sessions still apply (StrokeDashArray does not render,
-CharacterSpacing is a no-op, decoration must be `IsHitTestVisible="False"`).
+Animation smoothness was investigated with objective SurfaceFlinger stats
+(`tools/sf-stats.py`): on the Debug build the entrance runs at 60 fps with 1.6 % doubled
+frames, swipe 3–4 %, idle 5–10 %. The stagger the user saw coincided with screen recording.
+A Release measurement is blocked by the environment (see Next actions).
 
 ## Last verified state
 
-- **Build:** `net10.0-desktop` and `net10.0-android` pass, 0 warnings. Tests 24/24 green.
-- **Runtime (desktop, App MCP, screenshots `tools/shots/d-*.png`):** light and dark full page;
-  ridge pin (`SAT 22 / 5.2 h`, "+48 % vs the 7-day average"); sessions pin (`THU 20 / 1 session`,
-  "−71 % vs daily average") and invited default ("+2 vs prior week"); ridge 7→14 (46.5 h,
-  `mon 10`/`sun 23`, AVG 3.3); sessions 14→7 (25 sessions, AVG 3.6); night press → "asleep
-  23:04 — awake 6:36"; road replay (`WED / 6.1 km`, "14.1 km remaining after this run").
-- **Runtime (Pixel 8, `tools/shots/px-*.png`):** inset and status bar, carousel paging and
-  pips, Dark/Light, replay mid-entrance with fills hidden. The user confirmed vertical scroll,
-  day-slot hits, and the 7/14 switch by hand.
-- **Not verified:** hover previews and keyboard walking (the MCP cannot hover), reduced
-  motion, the night scrub mid-drag by machine (the user reports it works, "not very well"
-  before the 4 px intent + scrub-on-press changes, untested since).
+- Build: `net10.0-desktop` 0 warnings; tests 24/24. `net10.0-android` last built clean at
+  `b6c5381`; later Android builds on this PC fail with `paging file is too small` in the
+  manifest-merger JVM (commit-limit exhaustion, not a code error).
+- Runtime desktop (App MCP, `tools/shots/d-*.png`): bench, pins, range switch, dark, replay.
+- Runtime Pixel 8 (`tools/shots/px-*.png`): inset, carousel + pips, centred card with full
+  foot padding, Dark/Light, replay mid-entrance, stadium pills. The APK on the device is the
+  A/B experiment build with the grain layer collapsed; the next successful install restores it.
+- Git: `master` at `6b3b9d2` plus this handoff; untracked `tools/shots/*.png` from the session.
 
-## Next actions
+## Next actions (in order)
 
-1. Uno.Sdk 6.6.42 -> 6.7.18 is the latest stable (checked 2026-08-27). Bump in `global.json`,
-   rebuild both heads, re-verify the Runtime Gotchas that were pinned on 6.6.42.
-2. Device pass on the carousel: does a real swipe ever skip a card (a 200 ms synthetic flick
-   jumped two)? Does the night scrub feel right now that it starts on press?
-3. Hover pass with a real pointer on desktop: ridge hollow-mark materialisation, sessions
-   `PART_Hover`, point-label fades.
-4. Decide SMAX overflow for sessions (fixed 6; live data above clips) and the ridge Ceiling.
-5. The time scrubber (`DELTA-time-scrubber`) is explicitly experimental and not built.
-   `docs/glyph-field-background.md` is an unrelated spec.
+1. Environment: `dotnet workload update` (the mono toolchain manifest 10.0.101 pins runtime
+   packs 10.0.1, which no longer exist; SDK 10.0.303 ships 10.0.11, so Release Android cannot
+   restore) and free commit memory / enlarge the pagefile so Android builds run again.
+2. Build a Release APK with `-c Release -p:FrameWatch=true`, install, and run
+   `python tools/sf-stats.py "release replay" input tap 948 206 --wait 3` (and idle, swipe).
+   That number decides whether anything in the app needs tuning. If it does: raise
+   `BreathClock` 30→60 Hz on phones, audit per-frame allocations in the runner/march.
+3. Rebuild Debug Android to put the grain back on the device.
+4. Uno.Sdk 6.6.42 → 6.7.18 (latest stable, checked 2026-08-27); re-verify the gotchas pinned
+   on 6.6.42 (StrokeDashArray, CharacterSpacing, ManipulationMode capture, CornerRadius oval).
+5. Device pass: real-finger carousel swipe (a 200 ms synthetic flick jumped two cards once),
+   night scrub now that it starts on press, pips placement (under header vs under card).
+6. Still open from the delta pass: ridge AVG label can touch the line at the left end;
+   SMAX 6 clip; in-wash grain not built; time scrubber is experimental and not built.
 
 ## Open questions
 
-- Ridge AVG label sits at the left end of the rule and can touch the line where the first day
-  is near the average; a small dodge (above vs below the rule) would settle it.
-- In-wash grain (grain clipped to each gradient's alpha) is not built; only the page grain
-  is. Needs an OpacityMask that works on Skia, or a per-wash tile.
-- Sample data for the ridge is anchored to the most recent Sunday so the week reads mon..sun
-  and the peak stays Saturday; sessions anchor to today. Two anchors, by design, until live data.
+- Should the pips ride under the card rather than under the header on the phone?
+- Replay on the phone replays all four cards; only the visible one is seen. Keep, or replay
+  the current card only?
+- The Uno usage rules discourage an in-app theme toggle; it was explicitly requested and stays.
 
 ## Relaunch
 
@@ -90,9 +59,12 @@ cd C:\Users\Platform006\UnoProjects\measures-uno
 dotnet build .\Measures\Measures.csproj -f net10.0-desktop
 .\tools\Verify.ps1 -Name check                      # stop, build, launch, PrintWindow capture
 $env:MEASURES_THEME='dark'; .\tools\Verify.ps1 -Name dark -NoBuild
+# Android (Pixel 8 serial 3C090DLJH000V4):
+dotnet build .\Measures\Measures.csproj -f net10.0-android -t:Install -p:AdbTarget="-s 3C090DLJH000V4"
+python tools\sf-stats.py "label" input swipe 900 1000 150 1000 400 --wait 1.5
 ```
 
-The `uno-app` MCP loads when the session is rooted in this folder: `uno_app_start` on
-`Measures\Measures.csproj` / `net10.0-desktop`, then `uno_app_pointer_click` with client
-coordinates (peer invokes fail on the chart buttons because `justMyCode` snapshots return
-their template Grids).
+App MCP: `uno_app_start` on `Measures\Measures.csproj` / `net10.0-desktop`; drive chart
+buttons with `uno_app_pointer_click` in client coordinates (peer invokes return template
+Grids). Stop the running app before a desktop build or the exe copy fails on the lock.
+`adb` is at `%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe` (not on PATH).
