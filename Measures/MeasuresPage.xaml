@@ -44,7 +44,7 @@
     </VisualStateManager.VisualStateGroups>
 
     <!-- a whisper of grain over the whole field, under everything on it -->
-    <controls:GrainLayer Opacity="0.18" />
+    <controls:GrainLayer Grain="0.18" />
 
     <ScrollViewer
         x:Name="Scroll"

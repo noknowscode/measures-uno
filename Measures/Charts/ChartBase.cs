@@ -38,10 +38,24 @@ public abstract partial class ChartBase : Control, ICaptionSource
 
     double _lastWidth;
     bool _entrancePlayed;
+    bool _reloading;
 
     protected ChartBase()
     {
         SizeChanged += OnSizeChanged;
+
+        // a chart moved between the bench and the carousel is unloaded and
+        // loaded again; its Unloaded handlers stop the breaths and runners,
+        // so a reload rebuilds from the same data to arm them again
+        Unloaded += (_, _) => _reloading = true;
+        Loaded += (_, _) =>
+        {
+            if (_reloading && _lastWidth > 0)
+            {
+                _reloading = false;
+                Rebuild(_lastWidth, PlotHeight);
+            }
+        };
     }
 
     public event EventHandler<Reading>? ReadingChanged;

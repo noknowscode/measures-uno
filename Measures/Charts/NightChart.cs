@@ -92,7 +92,11 @@ public sealed partial class NightChart : ChartBase
         // the chart advertises its gesture before anyone tries it
         ProtectedCursor = InputSystemCursor.Create(InputSystemCursorShape.SizeWestEast);
 
-        Unloaded += (_, _) => _breath?.Dispose();
+        Unloaded += (_, _) =>
+        {
+            _breath?.Dispose();
+            _breath = null;
+        };
     }
 
     /// <summary>
@@ -248,6 +252,12 @@ public sealed partial class NightChart : ChartBase
         {
             _scrubLine.Y1 = horizon;
             _scrubLine.Y2 = PlotBottom * s;
+        }
+
+        // armed here as well as by the entrance, so a reload breathes again
+        if (_breath is null && _wakeScale is not null)
+        {
+            _breath = BreathClock.BreatheRadius(_wakeScale, 1, 5.0 / 3.5);
         }
     }
 

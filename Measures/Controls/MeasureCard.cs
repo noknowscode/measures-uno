@@ -347,9 +347,21 @@ public sealed partial class MeasureCard : ContentControl
         }
     }
 
+    /// <summary>
+    /// Loaded and Unloaded are symmetric: a card moved between the bench and
+    /// the carousel is unloaded and loaded again, and a card that let go of
+    /// its chart and its palette on the way out has to take them back on the
+    /// way in - or Replay finds no chart, and captions stop speaking.
+    /// </summary>
     void OnLoaded(object sender, RoutedEventArgs e)
     {
         _loaded = true;
+
+        Palette.Recoloured -= OnRecoloured;
+        Palette.Recoloured += OnRecoloured;
+        LightTheRoom();
+
+        AttachSource();
         TryRise();
 
         _source?.PublishInitialReading();

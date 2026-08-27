@@ -35,12 +35,26 @@ public sealed partial class GrainLayer : Control
 
     Canvas? _host;
 
+    /// <summary>
+    /// How much grain shows. Applied to every tile rather than to the layer:
+    /// opacity on a container becomes a full-screen offscreen surface that
+    /// every frame has to re-composite, and a swipe pays for it.
+    /// </summary>
+    public static readonly DependencyProperty GrainProperty = DependencyProperty.Register(
+        nameof(Grain), typeof(double), typeof(GrainLayer), new PropertyMetadata(0.18, (d, _) => ((GrainLayer)d).Fill()));
+
     public GrainLayer()
     {
         DefaultStyleKey = typeof(GrainLayer);
 
         IsHitTestVisible = false;
         SizeChanged += (_, _) => Fill();
+    }
+
+    public double Grain
+    {
+        get => (double)GetValue(GrainProperty);
+        set => SetValue(GrainProperty, value);
     }
 
     /// <summary>
@@ -132,6 +146,7 @@ public sealed partial class GrainLayer : Control
 
         for (var i = 0; i < needed; i++)
         {
+            _tiles[i].Opacity = Grain;
             Canvas.SetLeft(_tiles[i], i % columns * TileSize);
             Canvas.SetTop(_tiles[i], i / columns * TileSize);
         }

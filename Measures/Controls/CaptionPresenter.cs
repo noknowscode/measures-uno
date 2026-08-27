@@ -31,7 +31,14 @@ public sealed partial class CaptionPresenter : Control
         DefaultStyleKey = typeof(CaptionPresenter);
 
         _brush.Color = Palette.Get(Palette.Token.Quiet);
-        Palette.Recoloured += OnRecoloured;
+
+        // symmetric, because a re-seated card unloads and loads again
+        Loaded += (_, _) =>
+        {
+            Palette.Recoloured -= OnRecoloured;
+            Palette.Recoloured += OnRecoloured;
+            OnRecoloured(null, EventArgs.Empty);
+        };
         Unloaded += (_, _) => Palette.Recoloured -= OnRecoloured;
     }
 

@@ -44,7 +44,18 @@ public sealed partial class MeasuresPage : Page
             SessionsCard.Replay();
         };
 
+        // seat before the first load when the window already knows its width,
+        // so a phone never pays for a bench it will not show
+        if (Microsoft.UI.Xaml.Window.Current?.Bounds.Width is > 0 and var width)
+        {
+            Seat(width >= WideWidth);
+        }
+
         Root.SizeChanged += (_, e) => Seat(e.NewSize.Width >= WideWidth);
+
+#if DEBUG
+        WatchFrames();
+#endif
 
         Loaded += (_, _) =>
         {
@@ -84,6 +95,31 @@ public sealed partial class MeasuresPage : Page
     }
 
     MeasureCard[] Cards => [RidgeCard, SessionsCard, NightCard, RoadCard];
+
+#if DEBUG
+    /// <summary>
+    /// Debug only: reports any frame that took more than two refreshes. This
+    /// is the one permanent Rendering subscription in the app, and it lives
+    /// only in Debug builds for exactly the reason it is otherwise forbidden.
+    /// </summary>
+    void WatchFrames()
+    {
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        var last = 0d;
+
+        Microsoft.UI.Xaml.Media.CompositionTarget.Rendering += (_, _) =>
+        {
+            var now = clock.Elapsed.TotalMilliseconds;
+            var gap = now - last;
+            last = now;
+
+            if (gap > 34 && gap < 2000)
+            {
+                Console.WriteLine($"Measures: slow frame {gap:0} ms");
+            }
+        };
+    }
+#endif
 
     /// <summary>
     /// Seats the four cards on the bench or in the carousel. One set of cards,
