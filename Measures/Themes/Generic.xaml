@@ -227,6 +227,8 @@
     <!--
       Opaque, so it never reads as a floating glyph on the mist, and hairline,
       so it stays furniture: the instruments are the only bold thing here.
+      The radius is half the 28 epx height, written out: an oversized radius
+      is reduced per axis on the Skia renderer and the pill becomes an oval.
     -->
     <Style x:Key="QuietButtonStyle" TargetType="Button">
         <Setter Property="Background" Value="{StaticResource CardBrush}" />
@@ -244,7 +246,7 @@
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="999"
+                            CornerRadius="14"
                             RenderTransformOrigin="0.5,0.5">
                             <Border.RenderTransform>
                                 <ScaleTransform x:Name="Press" />
@@ -259,7 +261,7 @@
                             Margin="-3"
                             BorderBrush="{StaticResource InkBrush}"
                             BorderThickness="2"
-                            CornerRadius="999"
+                            CornerRadius="17"
                             IsHitTestVisible="False"
                             Opacity="0" />
 
