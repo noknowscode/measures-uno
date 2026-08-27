@@ -6,6 +6,15 @@
 		<item name="android:windowActionBar">false</item>
 		<item name="windowNoTitle">true</item>
 		<item name="android:windowNoTitle">true</item>
+		<!--
+		  The system chrome joins the field: the status bar is glass over the
+		  plaster, and its icons read dark on the light scheme. The page pads
+		  its own top inset from the visible bounds.
+		-->
+		<item name="android:statusBarColor">@android:color/transparent</item>
+		<item name="android:windowLightStatusBar">true</item>
+		<item name="android:navigationBarColor">@android:color/transparent</item>
+		<item name="android:windowLightNavigationBar">true</item>
 	</style>
 
 	<style name="Theme.App.Starting" parent="Theme.SplashScreen">

@@ -36,12 +36,37 @@ public sealed partial class MeasuresPage : Page
 
         Loaded += (_, _) =>
         {
+            PadForChrome();
+
             // on activation focus lands on the first focusable control, which
             // scrolls the page down and paints a focus ring nobody asked for.
             // Park it on the root instead; Tab still walks into the bench.
             Root.Focus(FocusState.Programmatic);
             Scroll.ChangeView(null, 0, null, disableAnimation: true);
         };
+    }
+
+    /// <summary>
+    /// On a phone the field runs under the translucent status bar, which is
+    /// the point - the chrome joins the field - but the header must not. The
+    /// inset is the gap between the window and its visible bounds, applied
+    /// as a margin so the responsive padding setters still own Padding.
+    /// </summary>
+    void PadForChrome()
+    {
+        try
+        {
+            var window = Microsoft.UI.Xaml.Window.Current?.Bounds ?? default;
+            var visible = Windows.UI.ViewManagement.ApplicationView.GetForCurrentView().VisibleBounds;
+            var top = Math.Max(visible.Top - window.Top, 0);
+            var bottom = Math.Max(window.Bottom - visible.Bottom, 0);
+
+            Wrap.Margin = new Thickness(0, top, 0, bottom);
+        }
+        catch (Exception)
+        {
+            // desktop has no system inset to speak of, and nothing to apologise for
+        }
     }
 
     /// <summary>
