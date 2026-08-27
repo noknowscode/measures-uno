@@ -6,18 +6,34 @@ namespace Measures;
 /// <summary>
 /// One page, four instruments on a bench. Every numeral is derived from the
 /// same record the chart draws, so a card can never say one thing and show
-/// another.
+/// another. The ridge and the sessions window onto a longer history; their
+/// period labels switch the window, and everything on the card recomputes.
 /// </summary>
 public sealed partial class MeasuresPage : Page
 {
+    int _ridgeDays = 7;
+    int _sessionDays = 14;
+
     public MeasuresPage()
     {
         InitializeComponent();
 
         Bind();
 
-        // on activation focus lands on the first chart mark, and the scroll
-        // viewer brings it into view - the page would open part way down
+        RidgeCard.RangeToggled += (_, _) =>
+        {
+            _ridgeDays = _ridgeDays == 7 ? 14 : 7;
+            ShowRidge(_ridgeDays);
+            RidgeCard.Replay();
+        };
+
+        SessionsCard.RangeToggled += (_, _) =>
+        {
+            _sessionDays = _sessionDays == 7 ? 14 : 7;
+            ShowSessions(_sessionDays);
+            SessionsCard.Replay();
+        };
+
         Loaded += (_, _) =>
         {
             // on activation focus lands on the first focusable control, which
@@ -26,7 +42,6 @@ public sealed partial class MeasuresPage : Page
             Root.Focus(FocusState.Programmatic);
             Scroll.ChangeView(null, 0, null, disableAnimation: true);
         };
-
     }
 
     /// <summary>
@@ -36,7 +51,7 @@ public sealed partial class MeasuresPage : Page
     /// </summary>
     void OnReplay(object sender, RoutedEventArgs e)
     {
-        foreach (var card in new[] { RidgeCard, RainCard, NightCard, RoadCard })
+        foreach (var card in new[] { RidgeCard, SessionsCard, NightCard, RoadCard })
         {
             card.Replay();
         }
@@ -44,17 +59,8 @@ public sealed partial class MeasuresPage : Page
 
     void Bind()
     {
-        var ridge = SampleData.Ridge;
-        Ridge.ChartData = ridge;
-        RidgeCard.NumeralValue = ridge.Total.ToString("0.#", CultureInfo.InvariantCulture);
-        // value and unit only: "7 days" in the head already owns the period
-        RidgeCard.NumeralSuffix = " h";
-
-        var sessions = SampleData.Sessions;
-        Rain.ChartData = sessions;
-        RainCard.NumeralValue = sessions.Total.ToString(CultureInfo.InvariantCulture);
-        RainCard.NumeralSuffix = sessions.Total == 1 ? " session" : " sessions";
-        RainCard.AxisLabels = $"{Format.DayLabel(sessions.Days[0].Date)}, today";
+        ShowRidge(_ridgeDays);
+        ShowSessions(_sessionDays);
 
         var night = SampleData.Night;
         Night.ChartData = night;
@@ -64,8 +70,34 @@ public sealed partial class MeasuresPage : Page
 
         var runs = SampleData.Runs;
         Road.ChartData = runs;
+        // value and unit only: the goal lives in the chart, labelled at the ring
         RoadCard.NumeralValue = runs.Ran.ToString("0.#", CultureInfo.InvariantCulture);
-        RoadCard.NumeralSuffix = $" of {runs.GoalKm:0.#} km";
+        RoadCard.NumeralSuffix = " km";
         RoadCard.FootRight = runs.Runs.Count == 1 ? "1 run" : $"{runs.Runs.Count} runs";
+    }
+
+    /// <summary>The ridge over the last N days: totals, average, peak and axis dates all follow.</summary>
+    void ShowRidge(int days)
+    {
+        var ridge = SampleData.RidgeHistory.Last(days);
+
+        Ridge.ChartData = ridge;
+        RidgeCard.NumeralValue = ridge.Total.ToString("0.#", CultureInfo.InvariantCulture);
+        // value and unit only: the head already owns the period
+        RidgeCard.NumeralSuffix = " h";
+        RidgeCard.HeadRight = $"{days} days";
+        RidgeCard.AxisLabels = $"{Format.DayLabel(ridge.Days[0].Date)}, {Format.DayLabel(ridge.Days[^1].Date)}";
+    }
+
+    void ShowSessions(int days)
+    {
+        var sessions = SampleData.SessionsHistory.Last(days);
+
+        Sessions.PriorData = SampleData.SessionsHistory.Before(days);
+        Sessions.ChartData = sessions;
+        SessionsCard.NumeralValue = sessions.Total.ToString(CultureInfo.InvariantCulture);
+        SessionsCard.NumeralSuffix = sessions.Total == 1 ? " session" : " sessions";
+        SessionsCard.HeadRight = $"{days} days";
+        SessionsCard.AxisLabels = $"{Format.DayLabel(sessions.Days[0].Date)}, today";
     }
 }

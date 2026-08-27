@@ -24,9 +24,9 @@
                     <Setter Target="RidgeCard.(Grid.Column)" Value="0" />
                     <Setter Target="RidgeCard.(Grid.ColumnSpan)" Value="1" />
 
-                    <Setter Target="RainCard.(Grid.Row)" Value="0" />
-                    <Setter Target="RainCard.(Grid.Column)" Value="1" />
-                    <Setter Target="RainCard.(Grid.ColumnSpan)" Value="1" />
+                    <Setter Target="SessionsCard.(Grid.Row)" Value="0" />
+                    <Setter Target="SessionsCard.(Grid.Column)" Value="1" />
+                    <Setter Target="SessionsCard.(Grid.ColumnSpan)" Value="1" />
 
                     <Setter Target="NightCard.(Grid.Row)" Value="1" />
                     <Setter Target="NightCard.(Grid.Column)" Value="0" />
@@ -109,32 +109,31 @@
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
+                    <!-- the period labels of the ridge and the sessions are live range switchers -->
                     <controls:MeasureCard
                         x:Name="RidgeCard"
                         Grid.Row="0"
                         Grid.Column="0"
                         Grid.ColumnSpan="2"
-                        AxisInset="0.033"
-                        AxisLabels="mon, sun"
                         FootRight="hours"
                         HeadLeft="Deep work"
-                        HeadRight="7 days"
+                        IsRangeSwitch="True"
                         RiseDelay="0"
-                        Temperature="Butter">
+                        Temperature="Effort">
                         <charts:RidgeChart x:Name="Ridge" />
                     </controls:MeasureCard>
 
                     <controls:MeasureCard
-                        x:Name="RainCard"
+                        x:Name="SessionsCard"
                         Grid.Row="1"
                         Grid.Column="0"
                         Grid.ColumnSpan="2"
                         FootRight="focus"
                         HeadLeft="Sessions"
-                        HeadRight="14 days"
+                        IsRangeSwitch="True"
                         RiseDelay="120"
-                        Temperature="Sage">
-                        <charts:RainChart x:Name="Rain" />
+                        Temperature="Frequency">
+                        <charts:StepChart x:Name="Sessions" />
                     </controls:MeasureCard>
 
                     <controls:MeasureCard
@@ -147,7 +146,7 @@
                         HeadLeft="Sleep"
                         HeadRight="Last night"
                         RiseDelay="240"
-                        Temperature="Lavender">
+                        Temperature="Rest">
                         <charts:NightChart x:Name="Night" />
                     </controls:MeasureCard>
 
@@ -156,12 +155,11 @@
                         Grid.Row="3"
                         Grid.Column="0"
                         Grid.ColumnSpan="2"
-                        AxisInset="0.027"
                         AxisLabels="0, 25 km"
                         HeadLeft="Running"
                         HeadRight="This week"
                         RiseDelay="360"
-                        Temperature="Blush">
+                        Temperature="Distance">
                         <charts:RoadChart x:Name="Road" />
                     </controls:MeasureCard>
 

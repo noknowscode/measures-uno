@@ -19,17 +19,19 @@ namespace Measures.Charts;
 /// under the charcoal progress, so it reads as light rather than as a second
 /// line. The runner is the single boldest thing on the page; everything else
 /// here stays hairline so it can be.
+///
+/// The goal lives in the chart: a hollow ring at the road's end, labelled with
+/// the target, so the numeral above can be the distance alone.
 /// </summary>
 public sealed partial class RoadChart : ChartBase
 {
-    /// <summary>The road, authored once in a 300-wide space and scaled across.</summary>
+    /// <summary>The road, authored in the 300 design space from x 10 to 290.</summary>
     static readonly (double X, double Y)[][] RoadSegments =
     [
-        [(8, 62), (50, 22), (95, 88), (145, 50)],
-        [(145, 50), (185, 22), (215, 80), (292, 42)],
+        [(DataLeft, 62), (50, 22), (95, 88), (145, 50)],
+        [(145, 50), (185, 22), (215, 80), (DataRight, 42)],
     ];
 
-    const double DesignWidth = 300;
     const double MarchDistance = -18;
     const double GhostDash = 2;
     const double GhostGap = 4;
@@ -43,7 +45,7 @@ public sealed partial class RoadChart : ChartBase
     const double ChosenRadius = 3.5;
     const double HoverRadius = 4;
 
-    /// <summary>Breathing room above and below the road inside its plot.</summary>
+    /// <summary>Design units of breathing room above and below the road inside its box.</summary>
     const double RoadInset = 10;
 
     public static readonly DependencyProperty ChartDataProperty = DependencyProperty.Register(
@@ -63,19 +65,20 @@ public sealed partial class RoadChart : ChartBase
     Ellipse? _echo;
     Ellipse? _runner;
     DotButton? _goal;
+    HaloText? _goalLabel;
     ScaleTransform? _echoScale;
 
     CubicSampler? _sampler;
     EventHandler<object>? _rendering;
     Ticker? _march;
     int? _selected;
+    int? _hovered;
     bool _arrived;
     int _runToken;
 
     public RoadChart()
     {
         DefaultStyleKey = typeof(RoadChart);
-        PlotHeight = 96;
 
         Unloaded += (_, _) =>
         {
@@ -134,6 +137,7 @@ public sealed partial class RoadChart : ChartBase
         }
 
         ClearMarks();
+        HideLabel();
 
         var data = ChartData;
 
@@ -143,14 +147,14 @@ public sealed partial class RoadChart : ChartBase
             return;
         }
 
-        var scale = width / DesignWidth;
+        var s = Px;
 
         var raw = RoadSegments
-            .Select(s => new CubicSegment(
-                new Point(s[0].X * scale, s[0].Y),
-                new Point(s[1].X * scale, s[1].Y),
-                new Point(s[2].X * scale, s[2].Y),
-                new Point(s[3].X * scale, s[3].Y)))
+            .Select(seg => new CubicSegment(
+                new Point(seg[0].X * s, seg[0].Y),
+                new Point(seg[1].X * s, seg[1].Y),
+                new Point(seg[2].X * s, seg[2].Y),
+                new Point(seg[3].X * s, seg[3].Y)))
             .ToList();
 
         // a cubic stays well inside its control polygon, so the authored y range
@@ -162,13 +166,14 @@ public sealed partial class RoadChart : ChartBase
         var highest = probe.Points.Max(p => p.Y);
         var span = highest - lowest;
 
-        var gain = span < 0.001 ? 1 : (height - 2 * RoadInset) / span;
-        var offset = RoadInset - gain * lowest;
+        var inset = RoadInset * s;
+        var gain = span < 0.001 ? 1 : (height - 2 * inset) / span;
+        var offset = inset - gain * lowest;
 
         Point Fit(Point p) => new(p.X, gain * p.Y + offset);
 
         var segments = raw
-            .Select(s => new CubicSegment(Fit(s.P0), Fit(s.C1), Fit(s.C2), Fit(s.P3)))
+            .Select(seg => new CubicSegment(Fit(seg.P0), Fit(seg.C1), Fit(seg.C2), Fit(seg.P3)))
             .ToList();
 
         _sampler = CubicSampler.FromSegments(segments);
@@ -237,7 +242,7 @@ public sealed partial class RoadChart : ChartBase
         }
 
         Publish(Reading.Default(Invited
-            ? $"{data.Left:0.#} km left — one long run closes it"
+            ? string.Create(CultureInfo.InvariantCulture, $"{data.Left:0.#} km remaining")
             : "tap a footfall to replay its run"));
     }
 
@@ -256,6 +261,11 @@ public sealed partial class RoadChart : ChartBase
         _goal.MoveTo(_sampler.End.X, _sampler.End.Y);
         _goal.SetColours(Colors.Transparent, Palette.Get(Palette.Token.Ink, 0.5), 1.5, animate: false);
         _goal.SetRadius(4, animate: false);
+
+        // the goal says its number here, so the numeral does not have to
+        _goalLabel ??= AddReferenceLabel();
+        _goalLabel.Text = string.Create(CultureInfo.InvariantCulture, $"goal {data.GoalKm:0.#}");
+        PlaceLabelAbove(_goalLabel, _sampler.End.X - 8, _sampler.End.Y - 6, alignRight: true);
 
         if (_echo is not null)
         {
@@ -292,6 +302,7 @@ public sealed partial class RoadChart : ChartBase
             mark.Click += OnMarkClick;
             mark.PointerEntered += OnMarkEntered;
             mark.PointerExited += OnMarkExited;
+            mark.LostFocus += OnMarkLostFocus;
 
             Plot.Children.Add(mark);
 
@@ -310,6 +321,7 @@ public sealed partial class RoadChart : ChartBase
             mark.Click -= OnMarkClick;
             mark.PointerEntered -= OnMarkEntered;
             mark.PointerExited -= OnMarkExited;
+            mark.LostFocus -= OnMarkLostFocus;
             mark.SetBreathing(false);
             Plot?.Children.Remove(mark);
         }
@@ -345,29 +357,42 @@ public sealed partial class RoadChart : ChartBase
         Traverse(index);
     }
 
-    /// <summary>Hover is a preview in the body as well as the caption: the footfall grows.</summary>
+    /// <summary>Hover is a preview in the body as well as the caption: the footfall grows and reads.</summary>
     void OnMarkEntered(object sender, PointerRoutedEventArgs e)
     {
         var mark = (DotButton)sender;
         var index = (int)mark.Tag;
+
+        _hovered = index;
 
         if (!mark.IsBreathing)
         {
             mark.SetRadius(Math.Max(RadiusFor(index), HoverRadius));
         }
 
+        ShowLabel(mark.Centre, ChartData!.Runs[index].Day, ValueFor(index));
         Publish(Reading.Preview(ReadingFor(index)));
     }
 
-    void OnMarkExited(object sender, PointerRoutedEventArgs e)
+    void OnMarkExited(object sender, PointerRoutedEventArgs e) => EndPreview((DotButton)sender);
+
+    void OnMarkLostFocus(object sender, RoutedEventArgs e) => EndPreview((DotButton)sender);
+
+    void EndPreview(DotButton mark)
     {
-        var mark = (DotButton)sender;
+        if (_hovered != (int)mark.Tag)
+        {
+            return;
+        }
+
+        _hovered = null;
 
         if (!mark.IsBreathing)
         {
             mark.SetRadius(RadiusFor((int)mark.Tag));
         }
 
+        RenderLabel();
         PublishCurrent();
     }
 
@@ -400,6 +425,7 @@ public sealed partial class RoadChart : ChartBase
         MarkInvited();
         StopRunner();
         _selected = null;
+        HideLabel();
 
         if (_ghost is not null && _sampler is { } road)
         {
@@ -420,11 +446,16 @@ public sealed partial class RoadChart : ChartBase
         RenderMarks(animate: true);
     }
 
+    string ValueFor(int index) =>
+        string.Create(CultureInfo.InvariantCulture, $"{ChartData!.Runs[index].Km:0.#} km");
+
+    /// <summary>The foot interprets: where this run left the week, not what it was.</summary>
     string ReadingFor(int index)
     {
-        var run = ChartData!.Runs[index];
+        var data = ChartData!;
+        var after = data.Runs.Take(index + 1).Sum(r => r.Km);
 
-        return string.Create(CultureInfo.InvariantCulture, $"{run.Day} — {run.Km:0.#} km");
+        return string.Create(CultureInfo.InvariantCulture, $"{Math.Max(data.GoalKm - after, 0):0.#} km remaining after this run");
     }
 
     void PublishCurrent()
@@ -442,7 +473,20 @@ public sealed partial class RoadChart : ChartBase
     void Render(bool animate)
     {
         RenderMarks(animate);
+        RenderLabel();
         PublishCurrent();
+    }
+
+    void RenderLabel()
+    {
+        if (_selected is { } index && index < _marks.Count)
+        {
+            ShowLabel(_marks[index].Centre, ChartData!.Runs[index].Day, ValueFor(index));
+        }
+        else
+        {
+            HideLabel();
+        }
     }
 
     void RenderMarks(bool animate)
@@ -451,8 +495,8 @@ public sealed partial class RoadChart : ChartBase
 
         for (var i = 0; i < _marks.Count; i++)
         {
-            // the same grammar the ridge uses: charcoal fills what is being
-            // read, everything else is an outline. Chosen then differs from
+            // the doctrine: a small hollow mark for a past run, solid for the
+            // one being read and for the current one. Chosen then differs from
             // resting on fill AND size, not on size alone
             var isHot = _selected == i || i == last;
 
@@ -500,6 +544,7 @@ public sealed partial class RoadChart : ChartBase
         var runner = _runner;
         var sampler = _sampler;
         var duration = 400 + data.Runs[index].Km / data.GoalKm * 2500;
+
         if (_trace is not null)
         {
             _trace.Opacity = 1;
@@ -617,7 +662,4 @@ public sealed partial class RoadChart : ChartBase
         Anim.Animate(_echoScale, "ScaleY", 1, 13 / 4d, 1400, Anim.EaseHands, delayMs);
         Anim.Animate(_echo, "Opacity", 0.7, 0, 1400, Anim.EaseHands, delayMs);
     }
-
-    static void Centre(FrameworkElement element, Point at) =>
-        Place(element, at.X - element.Width / 2, at.Y - element.Height / 2);
 }

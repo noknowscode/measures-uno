@@ -8,22 +8,32 @@ using Microsoft.UI.Xaml.Shapes;
 namespace Measures.Controls;
 
 /// <summary>
-/// The temperature of light a card is lit by. One per instrument - four rooms
-/// lit differently, and the only place colour is allowed on the page.
+/// The temperature of light a card is lit by, named for what it lights: one
+/// per instrument - four rooms lit differently, and the only place colour is
+/// allowed on the page. Hue tells the rooms apart and never the state.
 /// </summary>
 public enum Temperature
 {
-    Butter,
-    Sage,
-    Lavender,
-    Blush,
+    /// <summary>Butter: dawn on the ridge.</summary>
+    Effort,
+
+    /// <summary>Sage: air after rain.</summary>
+    Frequency,
+
+    /// <summary>Lavender: dusk over the valley.</summary>
+    Rest,
+
+    /// <summary>Blush: late sun on the road.</summary>
+    Distance,
 }
 
 /// <summary>
-/// The device face every measure sits in. It owns all the chrome, so the four
-/// charts only ever draw their plot: numeral tops and chart bottoms are the two
-/// horizontals shared across the bench, and they line up because this control
-/// decides them, not the charts.
+/// The device face every measure sits in, with one rigid anatomy: label and
+/// period, value and unit, chart, rule, context. It owns all the chrome, so
+/// the four charts only ever draw their plot; numeral tops, chart boxes and
+/// axis rows are shared horizontals across the bench, and they line up because
+/// this control decides them, not the charts. The metric column is anchored to
+/// the top with a fixed gap to the chart, so slack never pools between them.
 ///
 /// It also owns the room's light: the chart names a <see cref="Temperature"/>
 /// and the card renders it as a wash descending from its top edge. The chart
@@ -37,6 +47,13 @@ public sealed partial class MeasureCard : ContentControl
     public static readonly DependencyProperty HeadRightProperty = DependencyProperty.Register(
         nameof(HeadRight), typeof(string), typeof(MeasureCard), new PropertyMetadata(string.Empty));
 
+    /// <summary>
+    /// True when the period label is a live range switcher. A caret is drawn
+    /// only where a tap does something: an affordance that does nothing is a lie.
+    /// </summary>
+    public static readonly DependencyProperty IsRangeSwitchProperty = DependencyProperty.Register(
+        nameof(IsRangeSwitch), typeof(bool), typeof(MeasureCard), new PropertyMetadata(false, OnRangeSwitchChanged));
+
     public static readonly DependencyProperty FootRightProperty = DependencyProperty.Register(
         nameof(FootRight), typeof(string), typeof(MeasureCard), new PropertyMetadata(string.Empty));
 
@@ -49,7 +66,7 @@ public sealed partial class MeasureCard : ContentControl
     public static readonly DependencyProperty NumeralTailProperty = DependencyProperty.Register(
         nameof(NumeralTail), typeof(string), typeof(MeasureCard), new PropertyMetadata(string.Empty, OnNumeralChanged));
 
-    /// <summary>Comma separated axis whispers, laid out edge to edge under the chart.</summary>
+    /// <summary>Comma separated axis whispers, laid out under the chart's data span.</summary>
     public static readonly DependencyProperty AxisLabelsProperty = DependencyProperty.Register(
         nameof(AxisLabels), typeof(string), typeof(MeasureCard), new PropertyMetadata(string.Empty, OnAxisChanged));
 
@@ -59,15 +76,16 @@ public sealed partial class MeasureCard : ContentControl
     /// <summary>The temperature of light this room is lit by.</summary>
     public static readonly DependencyProperty TemperatureProperty = DependencyProperty.Register(
         nameof(Temperature), typeof(Temperature), typeof(MeasureCard),
-        new PropertyMetadata(Temperature.Butter, OnTemperatureChanged));
+        new PropertyMetadata(Temperature.Effort, OnTemperatureChanged));
 
     /// <summary>
     /// How far the axis whispers are pulled in from the plot's edges, as a
-    /// fraction of its width. The ends sit under the first and last data point
-    /// rather than under the box, which is where the eye reads them from.
+    /// fraction of its width. Every chart's data spans x 10 to 290 of its 300
+    /// box, so the whispers share that 3.3% and sit under the first and last
+    /// data point rather than under the box.
     /// </summary>
     public static readonly DependencyProperty AxisInsetProperty = DependencyProperty.Register(
-        nameof(AxisInset), typeof(double), typeof(MeasureCard), new PropertyMetadata(0d, OnAxisChanged));
+        nameof(AxisInset), typeof(double), typeof(MeasureCard), new PropertyMetadata(10 / 300d, OnAxisChanged));
 
     readonly TranslateTransform _rise = new();
 
@@ -90,6 +108,8 @@ public sealed partial class MeasureCard : ContentControl
     FrameworkElement? _riseHost;
     TextBlock? _numeral;
     Canvas? _axis;
+    FrameworkElement? _headLabel;
+    RangeSwitch? _range;
     ICaptionSource? _source;
     bool _loaded;
     bool _risen;
@@ -105,6 +125,9 @@ public sealed partial class MeasureCard : ContentControl
         Unloaded += OnUnloaded;
     }
 
+    /// <summary>Raised when the range switcher is tapped. The page decides what the next range is.</summary>
+    public event EventHandler? RangeToggled;
+
     public string HeadLeft
     {
         get => (string)GetValue(HeadLeftProperty);
@@ -115,6 +138,12 @@ public sealed partial class MeasureCard : ContentControl
     {
         get => (string)GetValue(HeadRightProperty);
         set => SetValue(HeadRightProperty, value);
+    }
+
+    public bool IsRangeSwitch
+    {
+        get => (bool)GetValue(IsRangeSwitchProperty);
+        set => SetValue(IsRangeSwitchProperty, value);
     }
 
     public string FootRight
@@ -186,11 +215,25 @@ public sealed partial class MeasureCard : ContentControl
 
         _numeral = GetTemplateChild("PART_Numeral") as TextBlock;
         _axis = GetTemplateChild("PART_Axis") as Canvas;
+        _headLabel = GetTemplateChild("PART_HeadLabel") as FrameworkElement;
+
+        if (_range is not null)
+        {
+            _range.Click -= OnRangeClick;
+        }
+
+        _range = GetTemplateChild("PART_Range") as RangeSwitch;
+
+        if (_range is not null)
+        {
+            _range.Click += OnRangeClick;
+        }
 
         if (_axis is not null)
         {
             _axis.SizeChanged += (_, _) => PlaceAxis();
         }
+
         Caption = GetTemplateChild("PART_Caption") as CaptionPresenter;
 
         if (_riseHost is not null && !_risen)
@@ -200,6 +243,7 @@ public sealed partial class MeasureCard : ContentControl
             _rise.Y = 14;
         }
 
+        ShowRange();
         BuildNumeral();
         BuildAxis();
         AttachSource();
@@ -228,11 +272,14 @@ public sealed partial class MeasureCard : ContentControl
     static void OnTemperatureChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) =>
         ((MeasureCard)d).LightTheRoom();
 
+    static void OnRangeSwitchChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) =>
+        ((MeasureCard)d).ShowRange();
+
     static Palette.Token TokenFor(Temperature temperature) => temperature switch
     {
-        Temperature.Sage => Palette.Token.Sage,
-        Temperature.Lavender => Palette.Token.Lavender,
-        Temperature.Blush => Palette.Token.Blush,
+        Temperature.Frequency => Palette.Token.Sage,
+        Temperature.Rest => Palette.Token.Lavender,
+        Temperature.Distance => Palette.Token.Blush,
         _ => Palette.Token.Butter,
     };
 
@@ -251,6 +298,22 @@ public sealed partial class MeasureCard : ContentControl
     }
 
     void OnRecoloured(object? sender, EventArgs e) => LightTheRoom();
+
+    /// <summary>The head shows either the plain period or the switcher, never both.</summary>
+    void ShowRange()
+    {
+        if (_headLabel is not null)
+        {
+            _headLabel.Visibility = IsRangeSwitch ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        if (_range is not null)
+        {
+            _range.Visibility = IsRangeSwitch ? Visibility.Visible : Visibility.Collapsed;
+        }
+    }
+
+    void OnRangeClick(object sender, RoutedEventArgs e) => RangeToggled?.Invoke(this, EventArgs.Empty);
 
     void AttachSource()
     {
@@ -330,9 +393,10 @@ public sealed partial class MeasureCard : ContentControl
     }
 
     /// <summary>
-    /// The numeral is one line of three weights: the figure, a quiet italic
-    /// aside, and sometimes a trailing figure ("7 h 32"). Built in code because
-    /// named Runs inside a template are not reliably reachable.
+    /// The numeral is value and unit, and sometimes a trailing figure ("7 h 32").
+    /// The unit is 41% of the value, a step back in colour, and a hair of
+    /// tracking away from it. Built in code because named Runs inside a
+    /// template are not reliably reachable.
     /// </summary>
     void BuildNumeral()
     {
@@ -352,7 +416,7 @@ public sealed partial class MeasureCard : ContentControl
                 Text = NumeralSuffix,
                 FontSize = (double)Application.Current.Resources["NumeralSoftSize"],
                 FontStyle = Windows.UI.Text.FontStyle.Italic,
-                Foreground = (Brush)Application.Current.Resources["QuietBrush"],
+                Foreground = (Brush)Application.Current.Resources["UnitBrush"],
             });
         }
 

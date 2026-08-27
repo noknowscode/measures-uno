@@ -20,21 +20,12 @@ public static class Anim
     static bool? _enabled;
     static KeySpline? _hands;
     static KeySpline? _gravity;
-    static KeySpline? _hop;
 
     /// <summary>Hands: things a person moves, and everything that settles. cubic-bezier(0.22, 1, 0.36, 1)</summary>
     public static KeySpline EaseHands => _hands ??= Resource("EaseHands", 0.22, 1, 0.36, 1);
 
     /// <summary>Gravity: things that fall, and presses. cubic-bezier(0.4, 0, 1, 1)</summary>
     public static KeySpline EaseGravity => _gravity ??= Resource("EaseGravity", 0.4, 0, 1, 1);
-
-    /// <summary>
-    /// The one grandfathered third curve. The bead hop goes up and comes back
-    /// in a single gesture, and a symmetric arc is the only honest way to draw
-    /// it - either house curve would make the rise and the fall different
-    /// motions. Nothing else may use this.
-    /// </summary>
-    public static KeySpline BeadHop => _hop ??= Spline(0.35, 0, 0.65, 1);
 
     public static bool Enabled
     {

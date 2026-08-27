@@ -3,6 +3,7 @@ using Measures.Controls;
 using Measures.Data;
 using Measures.Motion;
 using Measures.Theming;
+using Microsoft.UI;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
@@ -15,15 +16,20 @@ namespace Measures.Charts;
 /// <em>pin</em>: choose a day and a plumb line drops from it, so the reading is
 /// weighed against the week rather than read off an axis.
 ///
-/// A chosen day is charcoal, larger, and carries the plumb. Three channels, no
-/// hue - so the state survives being read in grayscale.
+/// Marks follow the dot doctrine. An ordinary day has no marker and grows a
+/// hollow one under the pointer; the peak carries a small hollow one; today and
+/// the chosen day are solid. A chosen day is charcoal, larger, and carries the
+/// plumb - three channels, no hue - so the state survives being read in
+/// grayscale. A dashed rule at the true average, labelled, is the reference.
 /// </summary>
 public sealed partial class RidgeChart : ChartBase
 {
-    const double Pad = 10;
+    /// <summary>Design units: the plot keeps 10 above and below the data.</summary>
+    const double Top = 10;
+    const double Bottom = 110;
     const double Ceiling = 6;
 
-    /// <summary>Resting, today, chosen, and under the pointer.</summary>
+    /// <summary>Ordinary, peak, today, chosen, and under the pointer.</summary>
     const double RestRadius = 2.5;
     const double TodayRadius = 3.5;
     const double PinnedRadius = 4;
@@ -36,15 +42,17 @@ public sealed partial class RidgeChart : ChartBase
 
     Path? _fill;
     Path? _line;
+    Path? _avg;
     Line? _pin;
     ScaleTransform? _pinScale;
+    HaloText? _avgLabel;
     Point[] _points = [];
     int? _selected;
+    int? _hovered;
 
     public RidgeChart()
     {
         DefaultStyleKey = typeof(RidgeChart);
-        PlotHeight = 100;
     }
 
     public RidgeData? ChartData
@@ -57,6 +65,7 @@ public sealed partial class RidgeChart : ChartBase
     {
         _fill = GetTemplateChild("PART_Fill") as Path;
         _line = GetTemplateChild("PART_Line") as Path;
+        _avg = GetTemplateChild("PART_Avg") as Path;
         _pin = GetTemplateChild("PART_Pin") as Line;
 
         if (_pin is not null)
@@ -73,6 +82,9 @@ public sealed partial class RidgeChart : ChartBase
     {
         var chart = (RidgeChart)d;
 
+        chart._selected = null;
+        chart._hovered = null;
+
         if (chart.PlotWidth > 0)
         {
             chart.Rebuild(chart.PlotWidth, chart.PlotHeight);
@@ -88,6 +100,7 @@ public sealed partial class RidgeChart : ChartBase
         }
 
         ClearDots();
+        HideLabel();
 
         var data = ChartData;
 
@@ -95,26 +108,36 @@ public sealed partial class RidgeChart : ChartBase
         {
             _points = [];
             SetPathData(null, null);
+            PlaceRule(_avg, -10);
             return;
         }
 
+        var s = Px;
         var days = data.Days;
-        var span = width - 2 * Pad;
-        var plot = height - 2 * Pad;
 
         _points = [.. days.Select((day, i) => new Point(
-            Pad + i * span / (days.Count - 1),
-            height - Pad - day.Hours / Ceiling * plot))];
+            (DataLeft + i * DataSpan / (days.Count - 1)) * s,
+            YFor(day.Hours) * s))];
 
         var segments = Curves.Midpoint(_points);
 
         SetPathData(
-            Curves.ToGeometry(segments, closeToY: true, closeY: height),
+            Curves.ToGeometry(segments, closeToY: true, closeY: DesignHeight * s),
             Curves.ToGeometry(segments));
+
+        // the reference: a rule at the true average, and its value said once
+        var avgY = YFor(data.Average) * s;
+        PlaceRule(_avg, avgY);
+
+        _avgLabel ??= AddReferenceLabel();
+        _avgLabel.Text = string.Create(CultureInfo.InvariantCulture, $"avg {data.Average:0.0} h");
+        PlaceLabelAbove(_avgLabel, DataLeft * s, avgY);
 
         BuildDots(days);
         Render(animate: false);
     }
+
+    static double YFor(double hours) => Bottom - Math.Clamp(hours, 0, Ceiling) / Ceiling * (Bottom - Top);
 
     protected override void PlayEntrance()
     {
@@ -139,8 +162,9 @@ public sealed partial class RidgeChart : ChartBase
             return;
         }
 
+        // the foot interprets; it never repeats what the chart already shows
         Publish(Reading.Default(Invited
-            ? $"averaging {data.Average:0.0} h — {data.Peak.Full} peaked"
+            ? $"today {Format.DeltaHours(data.Days[^1].Hours - data.Average)} vs the {data.Days.Count}-day average"
             : "tap a day to weigh it"));
     }
 
@@ -165,6 +189,7 @@ public sealed partial class RidgeChart : ChartBase
             dot.PointerEntered -= OnDotEntered;
             dot.PointerExited -= OnDotExited;
             dot.KeyDown -= OnDotKeyDown;
+            dot.LostFocus -= OnDotLostFocus;
             dot.SetBreathing(false);
             Plot?.Children.Remove(dot);
         }
@@ -179,22 +204,29 @@ public sealed partial class RidgeChart : ChartBase
             return;
         }
 
+        // a fortnight packs the days closer; the hit zones share the pitch
+        var pitch = days.Count < 2 ? 28 : DataSpan * Px / (days.Count - 1);
+        var hit = Math.Clamp(pitch, 16, 28);
+
         for (var i = 0; i < days.Count; i++)
         {
             var dot = new DotButton
             {
-                HitSize = 28,
+                HitSize = hit,
                 BaseSize = 10,
                 FocusSize = 16,
                 Tag = i,
             };
 
-            AutomationProperties.SetName(dot, $"{days[i].Full}, {days[i].Hours:0.#} hours");
+            AutomationProperties.SetName(dot, string.Create(
+                CultureInfo.InvariantCulture,
+                $"{Format.DayName(days[i].Date)} {days[i].Date.Day}, {days[i].Hours:0.#} hours"));
 
             dot.Click += OnDotClick;
             dot.PointerEntered += OnDotEntered;
             dot.PointerExited += OnDotExited;
             dot.KeyDown += OnDotKeyDown;
+            dot.LostFocus += OnDotLostFocus;
 
             Plot.Children.Add(dot);
             dot.MoveTo(_points[i].X, _points[i].Y);
@@ -211,29 +243,48 @@ public sealed partial class RidgeChart : ChartBase
         Render(animate: true);
     }
 
-    /// <summary>Hover is a preview in the body as well as the caption: the mark grows.</summary>
-    void OnDotEntered(object sender, PointerRoutedEventArgs e)
+    /// <summary>Hover is a preview in the body as well as the caption: a hollow mark materialises and the reading appears.</summary>
+    void OnDotEntered(object sender, PointerRoutedEventArgs e) => Preview((int)((DotButton)sender).Tag);
+
+    void OnDotExited(object sender, PointerRoutedEventArgs e) => EndPreview();
+
+    void OnDotLostFocus(object sender, RoutedEventArgs e) => EndPreview();
+
+    void Preview(int index)
     {
-        var dot = (DotButton)sender;
-        var index = (int)dot.Tag;
+        _hovered = index;
+
+        var dot = _dots[index];
 
         if (!dot.IsBreathing)
         {
             dot.SetRadius(Math.Max(RadiusFor(index), HoverRadius));
         }
 
+        // an ordinary day has no mark until the pointer asks for one
+        Paint(index, animate: true);
+        ShowLabel(_points[index], DateFor(index), ValueFor(index));
         Publish(Reading.Preview(ReadingFor(index)));
     }
 
-    void OnDotExited(object sender, PointerRoutedEventArgs e)
+    void EndPreview()
     {
-        var dot = (DotButton)sender;
+        if (_hovered is not { } index)
+        {
+            return;
+        }
+
+        _hovered = null;
+
+        var dot = _dots[index];
 
         if (!dot.IsBreathing)
         {
-            dot.SetRadius(RadiusFor((int)dot.Tag));
+            dot.SetRadius(RadiusFor(index));
         }
 
+        Paint(index, animate: true);
+        RenderLabel();
         PublishCurrent();
     }
 
@@ -260,19 +311,19 @@ public sealed partial class RidgeChart : ChartBase
 
         e.Handled = true;
         _dots[next].Focus(FocusState.Keyboard);
-        Publish(Reading.Preview(ReadingFor(next)));
+        Preview(next);
     }
+
+    string DateFor(int index) => Format.DayLabel(ChartData!.Days[index].Date);
+
+    string ValueFor(int index) =>
+        string.Create(CultureInfo.InvariantCulture, $"{ChartData!.Days[index].Hours:0.#} h");
 
     string ReadingFor(int index)
     {
         var data = ChartData!;
-        var day = data.Days[index];
-        var delta = day.Hours - data.Average;
-        var sign = delta >= 0 ? "+" : "−";
 
-        return string.Create(
-            CultureInfo.InvariantCulture,
-            $"{day.Short} — {day.Hours:0.#} h · {sign}{Math.Abs(delta):0.0} vs average");
+        return $"{Format.DeltaPercent(data.Days[index].Hours, data.Average)} vs the {data.Days.Count}-day average";
     }
 
     void PublishCurrent()
@@ -293,19 +344,10 @@ public sealed partial class RidgeChart : ChartBase
 
         for (var i = 0; i < _dots.Count; i++)
         {
-            var isSelected = _selected == i;
-            var isToday = i == today;
-            var isHot = isSelected || isToday;
-
-            // charcoal fills the mark that is being read; the rest are outlines
-            _dots[i].SetColours(
-                isHot ? Palette.Get(Palette.Token.Ink) : Palette.Get(Palette.Token.Card),
-                Palette.Get(Palette.Token.Ink),
-                1.5,
-                animate);
+            Paint(i, animate);
 
             // today breathes only while nothing is pinned - one living thing at a time
-            var breathes = isToday && _selected is null;
+            var breathes = i == today && _selected is null;
 
             _dots[i].SetBreathing(breathes);
 
@@ -316,7 +358,40 @@ public sealed partial class RidgeChart : ChartBase
         }
 
         RenderPin(animate);
+        RenderLabel();
         PublishCurrent();
+    }
+
+    /// <summary>
+    /// The dot doctrine, per mark: solid for the chosen day and for today,
+    /// hollow for the peak and for whatever the pointer is over, and nothing
+    /// at all for an ordinary day.
+    /// </summary>
+    void Paint(int index, bool animate)
+    {
+        var isSolid = _selected == index || index == _dots.Count - 1;
+        var isHollow = _hovered == index || index == ChartData?.PeakIndex;
+
+        var ink = Palette.Get(Palette.Token.Ink);
+
+        var (fill, stroke) =
+            isSolid ? (ink, ink)
+            : isHollow ? (Palette.Get(Palette.Token.Card), ink)
+            : (Colors.Transparent, Colors.Transparent);
+
+        _dots[index].SetColours(fill, stroke, 1.5, animate);
+    }
+
+    void RenderLabel()
+    {
+        if (_selected is { } index && index < _points.Length)
+        {
+            ShowLabel(_points[index], DateFor(index), ValueFor(index));
+        }
+        else
+        {
+            HideLabel();
+        }
     }
 
     void RenderPin(bool animate)
@@ -334,7 +409,7 @@ public sealed partial class RidgeChart : ChartBase
 
         var point = _points[index];
         var top = point.Y + 6;
-        var bottom = PlotHeight - 2;
+        var bottom = (DesignHeight - 2) * Px;
 
         _pin.X1 = _pin.X2 = point.X;
         _pin.Y1 = top;

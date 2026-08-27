@@ -4,8 +4,6 @@
     xmlns:controls="using:Measures.Controls"
     xmlns:charts="using:Measures.Charts">
 
-
-
     <!-- ══ SpacedText ══ -->
 
     <Style x:Key="SpacedTextBase" TargetType="controls:SpacedText">
@@ -41,16 +39,13 @@
         <Setter Property="Foreground" Value="{StaticResource InkLeadBrush}" />
     </Style>
 
+    <!-- axis whispers at 45% ink: they are read, so they are no longer decorative taupe -->
     <Style x:Key="AxisStyle" TargetType="controls:SpacedText" BasedOn="{StaticResource SpacedTextBase}">
         <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
         <Setter Property="FontSize" Value="{StaticResource AxisSize}" />
-        <Setter Property="Foreground" Value="{StaticResource QuietBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource InkSoft45Brush}" />
         <Setter Property="Tracking" Value="0.12" />
     </Style>
-
-    <!-- ══ SpacedText ══ -->
-
-
 
     <!-- ══ GrainLayer ══ -->
 
@@ -103,7 +98,7 @@
                         Width="{TemplateBinding HitSize}"
                         Height="{TemplateBinding HitSize}"
                         Background="Transparent">
-                        <!-- 2 epx indigo ring, 3 epx clear of the mark -->
+                        <!-- 2 epx charcoal ring, 3 epx clear of the mark -->
                         <Ellipse
                             x:Name="PART_Focus"
                             Width="{TemplateBinding FocusSize}"
@@ -123,36 +118,104 @@
         </Setter>
     </Style>
 
-    <!-- ══ BeadColumn ══ -->
+    <!-- ══ DaySlot ══ -->
 
-    <Style TargetType="controls:BeadColumn">
+    <Style TargetType="controls:DaySlot">
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="IsTabStop" Value="True" />
         <Setter Property="UseSystemFocusVisuals" Value="False" />
         <Setter Property="Template">
             <Setter.Value>
-                <ControlTemplate TargetType="controls:BeadColumn">
+                <ControlTemplate TargetType="controls:DaySlot">
                     <Grid Background="Transparent">
                         <Rectangle
                             x:Name="PART_Focus"
-                            Margin="-3"
+                            Margin="1"
                             IsHitTestVisible="False"
                             Opacity="0"
-                            RadiusX="8"
-                            RadiusY="8"
+                            RadiusX="6"
+                            RadiusY="6"
                             Stroke="{StaticResource InkBrush}"
                             StrokeThickness="2" />
-                        <!-- the beads are built in code; the ring spreads from where the top one lands -->
-                        <Canvas x:Name="PART_Beads" IsHitTestVisible="False" />
-                        <Canvas IsHitTestVisible="False">
-                            <Ellipse
-                                x:Name="PART_Plip"
-                                Width="4.5"
-                                Height="4.5"
-                                Opacity="0"
-                                Stroke="{StaticResource InkBrush}"
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ══ RangeSwitch ══ -->
+
+    <!--
+      The period label as a switch: the label style exactly, plus a caret, and
+      a faint ink tint only under the pointer. No chrome - the caret is the
+      whole affordance, and it is only drawn where a tap does something.
+    -->
+    <Style TargetType="controls:RangeSwitch">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="IsTabStop" Value="True" />
+        <Setter Property="UseSystemFocusVisuals" Value="False" />
+        <Setter Property="VerticalAlignment" Value="Bottom" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="controls:RangeSwitch">
+                    <Grid Background="Transparent">
+                        <StackPanel
+                            Orientation="Horizontal"
+                            Spacing="5"
+                            VerticalAlignment="Bottom">
+                            <controls:SpacedText
+                                x:Name="PART_Label"
+                                Style="{StaticResource LabelStyle}"
+                                Text="{TemplateBinding Text}" />
+                            <Path
+                                x:Name="PART_Caret"
+                                Width="7"
+                                Height="4"
+                                Margin="0,0,0,2"
+                                VerticalAlignment="Bottom"
+                                Data="M0.5,0.5 L3.5,3.5 L6.5,0.5"
+                                Stroke="{StaticResource QuietBrush}"
+                                StrokeEndLineCap="Round"
+                                StrokeLineJoin="Round"
+                                StrokeStartLineCap="Round"
                                 StrokeThickness="1" />
-                        </Canvas>
+                        </StackPanel>
+                        <Border
+                            x:Name="FocusRing"
+                            Margin="-5,-3"
+                            BorderBrush="{StaticResource InkBrush}"
+                            BorderThickness="2"
+                            CornerRadius="6"
+                            IsHitTestVisible="False"
+                            Opacity="0" />
+
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal" />
+                                <VisualState x:Name="PointerOver">
+                                    <VisualState.Setters>
+                                        <Setter Target="PART_Label.Foreground" Value="{StaticResource InkSoft50Brush}" />
+                                        <Setter Target="PART_Caret.Stroke" Value="{StaticResource InkSoft50Brush}" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <VisualState.Setters>
+                                        <Setter Target="PART_Label.Foreground" Value="{StaticResource InkBrush}" />
+                                        <Setter Target="PART_Caret.Stroke" Value="{StaticResource InkBrush}" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Disabled" />
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="FocusStates">
+                                <VisualState x:Name="Unfocused" />
+                                <VisualState x:Name="PointerFocused" />
+                                <VisualState x:Name="Focused">
+                                    <VisualState.Setters>
+                                        <Setter Target="FocusRing.Opacity" Value="1" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
                     </Grid>
                 </ControlTemplate>
             </Setter.Value>
@@ -236,6 +299,11 @@
 
     <!-- ══ charts ══ -->
 
+    <!--
+      Every plot is a 300:120 box whose height follows its width; the chart
+      sets PlotHeight from the width it is given. Data spans x 10 to 290 of
+      the box in all four, and the annotation layer sits last in each canvas.
+    -->
     <Style x:Key="ChartHostStyle" TargetType="Control">
         <Setter Property="IsTabStop" Value="False" />
         <Setter Property="HorizontalAlignment" Value="Stretch" />
@@ -246,7 +314,12 @@
             <Setter.Value>
                 <ControlTemplate TargetType="charts:RidgeChart">
                     <Canvas x:Name="PART_Plot" Height="{TemplateBinding PlotHeight}">
-                        <Path x:Name="PART_Fill" Fill="{StaticResource RidgeMistBrush}" />
+                        <Path x:Name="PART_Fill" Fill="{StaticResource AtmoEffortBrush}" />
+                        <!-- the reference: a dashed rule at the true average -->
+                        <Path
+                            x:Name="PART_Avg"
+                            Stroke="{StaticResource ReferenceBrush}"
+                            StrokeThickness="1" />
                         <Path
                             x:Name="PART_Line"
                             Stroke="{StaticResource InkBrush}"
@@ -260,17 +333,65 @@
                             Opacity="0"
                             Stroke="{StaticResource InkSoft50Brush}"
                             StrokeThickness="1" />
+                        <controls:PointLabel x:Name="PART_Label" />
                     </Canvas>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
     </Style>
 
-    <Style TargetType="charts:RainChart" BasedOn="{StaticResource ChartHostStyle}">
+    <Style TargetType="charts:StepChart" BasedOn="{StaticResource ChartHostStyle}">
         <Setter Property="Template">
             <Setter.Value>
-                <ControlTemplate TargetType="charts:RainChart">
-                    <Canvas x:Name="PART_Plot" Height="{TemplateBinding PlotHeight}" />
+                <ControlTemplate TargetType="charts:StepChart">
+                    <Canvas x:Name="PART_Plot" Height="{TemplateBinding PlotHeight}">
+                        <Path x:Name="PART_Fill" Fill="{StaticResource AtmoFrequencyBrush}" />
+                        <Path
+                            x:Name="PART_Avg"
+                            Stroke="{StaticResource ReferenceBrush}"
+                            StrokeThickness="1" />
+                        <!-- round joins soften the corners of the steps without smoothing them -->
+                        <Path
+                            x:Name="PART_Line"
+                            Stroke="{StaticResource InkBrush}"
+                            StrokeEndLineCap="Round"
+                            StrokeLineJoin="Round"
+                            StrokeStartLineCap="Round"
+                            StrokeThickness="1.5" />
+                        <Line
+                            x:Name="PART_Pin"
+                            Opacity="0"
+                            Stroke="{StaticResource InkSoft50Brush}"
+                            StrokeThickness="1" />
+                        <!-- the doctrine: hollow at the peak, solid for today and for the chosen day -->
+                        <Ellipse
+                            x:Name="PART_Peak"
+                            Width="5"
+                            Height="5"
+                            Fill="{StaticResource CardBrush}"
+                            Stroke="{StaticResource InkBrush}"
+                            StrokeThickness="1.5" />
+                        <Ellipse
+                            x:Name="PART_Hover"
+                            Width="7.5"
+                            Height="7.5"
+                            Fill="{StaticResource CardBrush}"
+                            Opacity="0"
+                            Stroke="{StaticResource InkBrush}"
+                            StrokeThickness="1.5" />
+                        <Ellipse
+                            x:Name="PART_Chosen"
+                            Width="8"
+                            Height="8"
+                            Fill="{StaticResource InkBrush}"
+                            Opacity="0" />
+                        <Ellipse
+                            x:Name="PART_Today"
+                            Width="7"
+                            Height="7"
+                            Fill="{StaticResource InkBrush}" />
+                        <controls:PointLabel x:Name="PART_Label" />
+                    </Canvas>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
@@ -289,7 +410,7 @@
                         Background="Transparent">
                         <Rectangle
                             x:Name="PART_Sky"
-                            Fill="{StaticResource NightSkyBrush}"
+                            Fill="{StaticResource AtmoRestBrush}"
                             RadiusX="6"
                             RadiusY="6" />
                         <Line
@@ -297,7 +418,7 @@
                             Stroke="{StaticResource InkSoft12Brush}"
                             StrokeThickness="1" />
                         <!-- mist-blue for the depth of the valley -->
-                        <Path x:Name="PART_Rest" Fill="{StaticResource NightValleyBrush}" />
+                        <Path x:Name="PART_Rest" Fill="{StaticResource AtmoDepthBrush}" />
                         <!-- the night curve is data, so it is charcoal like all data -->
                         <Path
                             x:Name="PART_Curve"
@@ -333,10 +454,10 @@
             <Setter.Value>
                 <ControlTemplate TargetType="charts:RoadChart">
                     <Canvas x:Name="PART_Plot" Height="{TemplateBinding PlotHeight}">
-                        <!-- the road ahead, still dashed -->
+                        <!-- the road ahead: dashed, and a reference, so it sits at 15% -->
                         <Path
                             x:Name="PART_Ghost"
-                            Stroke="{StaticResource InkSoft22Brush}"
+                            Stroke="{StaticResource ReferenceBrush}"
                             StrokeEndLineCap="Round"
                             StrokeStartLineCap="Round"
                             StrokeThickness="1" />
@@ -348,7 +469,7 @@
                         <Path
                             x:Name="PART_Trace"
                             Opacity="0"
-                            Stroke="{StaticResource BlushWakeBrush}"
+                            Stroke="{StaticResource AtmoDistanceBrush}"
                             StrokeEndLineCap="Round"
                             StrokeStartLineCap="Round"
                             StrokeThickness="6" />
@@ -369,7 +490,7 @@
                             Width="8"
                             Height="8"
                             Opacity="0"
-                            Stroke="{StaticResource BlushWakeBrush}"
+                            Stroke="{StaticResource AtmoDistanceBrush}"
                             StrokeThickness="1.5" />
                         <Ellipse
                             x:Name="PART_Runner"
@@ -379,6 +500,7 @@
                             Fill="{StaticResource InkBrush}"
                             Stroke="{StaticResource CardBrush}"
                             StrokeThickness="1" />
+                        <controls:PointLabel x:Name="PART_Label" />
                     </Canvas>
                 </ControlTemplate>
             </Setter.Value>
@@ -396,7 +518,6 @@
         -->
         <Setter Property="MaxWidth" Value="420" />
         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-        <Setter Property="VerticalContentAlignment" Value="Bottom" />
         <Setter Property="IsTabStop" Value="False" />
         <Setter Property="Template">
             <Setter.Value>
@@ -407,10 +528,13 @@
                             BorderBrush="{StaticResource HairlineBrush}"
                             BorderThickness="1"
                             CornerRadius="24">
+                            <!-- the anatomy: LABEL·PERIOD / VALUE+UNIT / CHART / rule / CONTEXT·DETAIL -->
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
                                     <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
 
@@ -423,7 +547,7 @@
                                 -->
                                 <Rectangle
                                     x:Name="PART_EdgeLight"
-                                    Grid.RowSpan="3"
+                                    Grid.RowSpan="5"
                                     IsHitTestVisible="False"
                                     RadiusX="23"
                                     RadiusY="23" />
@@ -437,19 +561,25 @@
                                     <controls:SpacedText
                                         Style="{StaticResource LabelLeadStyle}"
                                         Text="{TemplateBinding HeadLeft}" />
+                                    <!-- a plain period, or a switcher; the card shows one -->
                                     <controls:SpacedText
+                                        x:Name="PART_HeadLabel"
                                         Grid.Column="1"
                                         Style="{StaticResource LabelStyle}"
                                         Text="{TemplateBinding HeadRight}" />
+                                    <controls:RangeSwitch
+                                        x:Name="PART_Range"
+                                        Grid.Column="1"
+                                        Text="{TemplateBinding HeadRight}"
+                                        Visibility="Collapsed" />
                                 </Grid>
 
-                                <!-- body: numeral pinned top, chart pinned bottom -->
-                                <Grid Grid.Row="1" Padding="28,0,28,0">
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="*" />
-                                    </Grid.RowDefinitions>
-
+                                <!--
+                                  body: the metric column is top-anchored with a
+                                  fixed 40 epx to the chart, so slack never pools
+                                  between them - it falls through to the foot
+                                -->
+                                <StackPanel Grid.Row="1" Padding="28,0,28,0">
                                     <TextBlock
                                         x:Name="PART_Numeral"
                                         FontFamily="{StaticResource SerifFont}"
@@ -458,21 +588,23 @@
                                         LineHeight="{StaticResource NumeralSize}"
                                         LineStackingStrategy="BlockLineHeight"
                                         TextWrapping="NoWrap" />
+                                    <ContentPresenter
+                                        Margin="0,40,0,0"
+                                        Content="{TemplateBinding Content}"
+                                        ContentTemplate="{TemplateBinding ContentTemplate}"
+                                        HorizontalAlignment="Stretch" />
+                                    <Canvas x:Name="PART_Axis" Margin="0,8,0,0" />
+                                </StackPanel>
 
-                                    <StackPanel
-                                        Grid.Row="1"
-                                        Margin="0,22,0,0"
-                                        VerticalAlignment="Bottom">
-                                        <ContentPresenter
-                                            Content="{TemplateBinding Content}"
-                                            ContentTemplate="{TemplateBinding ContentTemplate}"
-                                            HorizontalAlignment="Stretch" />
-                                        <Canvas x:Name="PART_Axis" Margin="0,8,0,0" />
-                                    </StackPanel>
-                                </Grid>
+                                <!-- the footer baseline: one hairline above every foot -->
+                                <Rectangle
+                                    Grid.Row="3"
+                                    Height="1"
+                                    Margin="28,18,28,0"
+                                    Fill="{StaticResource HairlineBrush}" />
 
                                 <!-- foot -->
-                                <Grid Grid.Row="2" Padding="28,18,28,28" ColumnSpacing="12">
+                                <Grid Grid.Row="4" Padding="28,18,28,28" ColumnSpacing="12">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />

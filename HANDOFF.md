@@ -1,74 +1,79 @@
 # HANDOFF — Measures Uno port
-Updated: 2026-08-25
+Updated: 2026-08-26
 
 ## Where we are
 
-Scaffolded a .NET 10 Uno single-project app (`net10.0-android;net10.0-desktop;net10.0`) from
-`MEASURES-BRIEFS.md` and the HTML prototype, and implemented all four instruments plus the
-`DELTA-sessions-beads.md` revision. The page is one `MeasuresPage` hosting four `MeasureCard`s,
-each holding a templated chart control (`RidgeChart`, `RainChart`, `NightChart`, `RoadChart`).
-Tokens live in a plain `Tokens.xaml` re-coloured in code by `Palette` on `ActualThemeChanged`.
-No MVUX/MVVM, no packages beyond the Uno.Sdk defaults, per the brief.
+The ten delta briefs under `docs/deltas/` are implemented on `master`, on top of the
+Soft Materialism retheme (commit `f4d5756`). The page is still one `MeasuresPage` hosting
+four `MeasureCard`s; no MVUX/MVVM, no packages beyond the Uno.Sdk defaults.
 
-Three platform gaps were found and worked around, each with the fix commented at the site:
+What the delta pass changed:
 
-- **`StrokeDashArray` does not render for `Path`** on Uno Skia desktop (proved with a static
-  `4,4` probe that drew solid). So draw-ins are a clip wipe driven by `Ticker`, the road ahead
-  is built as real dash geometry from arc length, and the 72.8 % progress is a truncated road.
-- **`TextBlock.CharacterSpacing` is a no-op** — `SpacedText` lays labels out one glyph per
-  `TextBlock` in a `StackPanel` with `Spacing`.
-- **A focus ring at a negative margin swallowed every button press** — decoration is now
-  `IsHitTestVisible="False"` throughout. This was why no chart button fired.
+- **Sessions are a step line** (`StepChart`), per `DELTA-sessions-stepline`. The bead system
+  (`BeadColumn`, `RainChart`, hop/plip, `Anim.BeadHop`) is deleted. Hit zones are full-height
+  `DaySlot`s; peak is a hollow mark, today rides the line end and breathes, pin drops a plumb.
+- **Shared 300:120 plot box** (`ChartBase.DesignWidth/Height`), data at x 10–290 in every
+  chart, height follows width (`PlotHeight` is computed in `Layout`). Charts author in design
+  units and multiply by `Px`. Axis whispers default to the 3.3 % inset.
+- **Annotation layer**: `PointLabel` (date over value, clamped, flips below near the top) and
+  `HaloText` (3 epx card-coloured halo = 8 offset copies; XAML has no text stroke). Reference
+  rules are real dash geometry (`Curves.DashedRule`), labelled `AVG 3.5 H` / `AVG 3.4` / `GOAL 25`.
+- **Interpretation captions**: ridge/sessions selected → "+X % vs …average"; ridge default →
+  today's delta; sessions default → "+N vs prior week/fortnight"; road → "N km remaining";
+  night → "asleep … — awake …". Invitations still occupy the caption until first use.
+- **Range switchers** (`RangeSwitch`, a chromeless ButtonBase with a caret) on ridge and
+  sessions: 7↔14 days with real data (`SampleData.RidgeHistory` 14 days, `SessionsHistory`
+  28 days), numerals/axis/AVG/peak recompute, entrance replays.
+- **Metric hierarchy**: numeral 64 / unit 26 at 75 % Quiet (`UnitBrush`), metric column
+  top-anchored with a fixed 40 epx gap, hairline rule above every foot, axis whispers at 45 %
+  ink, references at 15 % (`ReferenceBrush`), road numeral is "18.2 km" (goal lives in chart).
+- **Tokens**: wash brushes carry semantic names (`AtmoEffort/Frequency/Rest/Depth/Distance`),
+  `Temperature` enum is semantic (Effort/Frequency/Rest/Distance), and `Palette.Verify` throws
+  at the first `Apply` if any expected key or gradient stop count is missing from `Tokens.xaml`.
+
+Platform gaps carried from earlier sessions still apply (StrokeDashArray does not render,
+CharacterSpacing is a no-op, decoration must be `IsHitTestVisible="False"`).
 
 ## Last verified state
 
-- **Build:** `net10.0-desktop` and `net10.0-android` both pass, 0 warnings. Tests 19/19 green.
-- **Runtime (desktop, screenshots in `tools/shots/`):** all four cards render and match the
-  prototype. Verified by driving real input: ridge pin (`sat — 5.2 h · +1.7 vs average`),
-  sessions plip (`fri 14 — 2 sessions`), road replay + arrival swell (`wed — 6.1 km`), road
-  ahead (`6.8 km — about 39 min at your pace`). Night scrub verified from app logs — 162
-  scrub updates with correct readings (`4:44 — deep sleep`) and the dot tracking the curve;
-  a still of it mid-scrub was never captured. The Replay button re-draws every instrument
-  (not the card rise); beads were photographed raining in from above the card and stacking.
-- **Not verified:** dark scheme (paused by request), reduced motion, anything on an Android
-  device or emulator.
-- **Git:** `main`, last commit `3f8a732 fix: beads fall from the sky, and animations stop being collected mid-flight`.
-  Clean.
+- **Build:** `net10.0-desktop` passes, 0 warnings. Tests 24/24 green. Android not rebuilt this session.
+- **Runtime (desktop, App MCP, screenshots `tools/shots/d-*.png`):** light and dark full page;
+  ridge pin (`SAT 22 / 5.2 h`, "+48 % vs the 7-day average"); sessions pin (`THU 20 / 1 session`,
+  "−71 % vs daily average") and invited default ("+2 vs prior week"); ridge 7→14 (46.5 h,
+  `mon 10`/`sun 23`, AVG 3.3); sessions 14→7 (25 sessions, AVG 3.6); night press → "asleep
+  23:04 — awake 6:36"; road replay (`WED / 6.1 km`, "14.1 km remaining after this run").
+- **Not verified:** hover previews and keyboard walking (the MCP cannot hover), reduced
+  motion, Android, the night scrub mid-drag (only press/release).
 
-## Next actions (in order)
+## Next actions
 
-1. Verify on an Android device: **the night scrub vs vertical scroll** is the highest-risk item.
-   `NightChart` deliberately does not set `ManipulationMode` (that handed the pointer to the
-   gesture processor and killed the capture on desktop); it captures only after horizontal
-   intent, |Δx| > |Δy| over the first 8 px. Confirm a vertical swipe still scrolls the page.
-2. Dark scheme pass on all four cards (the palette exists and is wired; it has never been seen).
-3. Reduced-motion pass — every animation routes through `Anim`/`Ticker`/`BreathClock`, which
-   gate on `UISettings.AnimationsEnabled`, but no frame of it has been observed.
-4. Decide the bead ceiling overflow strategy (see Open questions) before wiring live data.
+1. Android device pass: night scrub vs vertical scroll (highest risk, unchanged), and the
+   `DaySlot` hit zones at the 14-day width (~24 epx).
+2. Hover pass with a real pointer: ridge hollow-mark materialisation, sessions `PART_Hover`,
+   point-label fades.
+3. Decide SMAX overflow for sessions (fixed 6; live data above clips) and the ridge Ceiling.
+4. The time scrubber (`DELTA-time-scrubber`) is explicitly experimental and not built.
+   `docs/glyph-field-background.md` is an unrelated spec.
 
 ## Open questions
 
-- Bead ceiling: days above ~8 sessions break single-column legibility. `BeadColumn` logs a
-  Debug warning past 6 (written, not asserted — a modal assert would freeze the render thread).
-  Double-column, 5-bead tally grouping, or numeral fallback?
-- Should selecting a day cascade its beads to `Ai` sequentially, echoing hover, rather than
-  switching at once?
-- Ship as an Uno sample/article pair or as a personal app? Decides how much API surface the
-  chart controls should expose.
-- `MEASURES-BRIEFS.md` still describes the old stem-based Sessions card; the delta supersedes
-  it but the brief was left unedited.
+- Ridge AVG label sits at the left end of the rule and can touch the line where the first day
+  is near the average; a small dodge (above vs below the rule) would settle it.
+- In-wash grain (grain clipped to each gradient's alpha) is not built; only the page grain
+  is. Needs an OpacityMask that works on Skia, or a per-wash tile.
+- Sample data for the ridge is anchored to the most recent Sunday so the week reads mon..sun
+  and the peak stays Saturday; sessions anchor to today. Two anchors, by design, until live data.
 
 ## Relaunch
 
 ```powershell
 cd C:\Users\Platform006\UnoProjects\measures-uno
 dotnet build .\Measures\Measures.csproj -f net10.0-desktop
-.\tools\Verify.ps1 -Name check        # stop, build, launch, screenshot
-.\tools\Drive.ps1  -ProcessId <pid> -Action click -X <x> -Y <y>
+.\tools\Verify.ps1 -Name check                      # stop, build, launch, PrintWindow capture
+$env:MEASURES_THEME='dark'; .\tools\Verify.ps1 -Name dark -NoBuild
 ```
 
-**MCP note:** the `uno-app` MCP server was never available this session — `.mcp.json` is read
-at session start and was created after this one began. Start the next session rooted in this
-folder and `uno_app_start` / visual-tree snapshots will be available, which is far better than
-the screenshot harness in `tools/`. Diagnostic: if the only Uno tools are
-`uno_platform_docs_search` / `_fetch`, the app MCP did not load and no `/mcp` reconnect fixes it.
+The `uno-app` MCP loads when the session is rooted in this folder: `uno_app_start` on
+`Measures\Measures.csproj` / `net10.0-desktop`, then `uno_app_pointer_click` with client
+coordinates (peer invokes fail on the chart buttons because `justMyCode` snapshots return
+their template Grids).

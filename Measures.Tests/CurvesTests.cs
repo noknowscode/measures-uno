@@ -65,4 +65,22 @@ public class CurvesTests
         segments[0].C2.X.Should().BeApproximately(40 - 40 * 0.4, 0.001);
         segments[^1].C1.X.Should().BeApproximately(40 + 60 * 0.4, 0.001);
     }
+
+    [Test]
+    public void Steps_MakeOnePlateauPerSlotAndAVerticalStepBetween()
+    {
+        var points = Curves.Steps([10, 50, 90, 130], [30, 0, 60]);
+
+        points.Should().HaveCount(6);
+
+        // a plateau is two points at the same level, slot edge to slot edge
+        points[0].Should().Be(new Point(10, 30));
+        points[1].Should().Be(new Point(50, 30));
+
+        // the step is vertical: same x, new level
+        points[2].X.Should().Be(points[1].X);
+        points[2].Y.Should().Be(0);
+
+        points[^1].Should().Be(new Point(130, 60));
+    }
 }

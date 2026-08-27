@@ -1,7 +1,7 @@
 namespace Measures.Data;
 
 /// <summary>One day on the ridge.</summary>
-public readonly record struct DayValue(string Short, string Full, double Hours);
+public readonly record struct DayValue(DateOnly Date, double Hours);
 
 public sealed record RidgeData(IReadOnlyList<DayValue> Days)
 {
@@ -11,12 +11,18 @@ public sealed record RidgeData(IReadOnlyList<DayValue> Days)
 
     public double Max => Days.Count == 0 ? 0 : Days.Max(d => d.Hours);
 
-    public DayValue Peak => Days.OrderByDescending(d => d.Hours).First();
+    public DayValue Peak => Days[PeakIndex];
+
+    /// <summary>The meaningful sample: the first day at the window's maximum.</summary>
+    public int PeakIndex => Days.Count == 0 ? -1 : Days.IndexOf(Days.MaxBy(d => d.Hours));
 
     public bool IsEmpty => Days.Count < 2;
+
+    /// <summary>The last <paramref name="count"/> days - a window onto the history.</summary>
+    public RidgeData Last(int count) => new(Days.TakeLast(count).ToList());
 }
 
-/// <summary>One day of the fortnight of rain.</summary>
+/// <summary>One day of the fortnight of sessions.</summary>
 public readonly record struct SessionDay(DateOnly Date, int Count);
 
 public sealed record SessionLog(IReadOnlyList<SessionDay> Days)
@@ -27,7 +33,19 @@ public sealed record SessionLog(IReadOnlyList<SessionDay> Days)
 
     public int Max => Days.Count == 0 ? 0 : Days.Max(d => d.Count);
 
+    /// <summary>The meaningful sample: the first day at the window's maximum.</summary>
+    public int PeakIndex => Days.Count == 0 ? -1 : Days.IndexOf(Days.MaxBy(d => d.Count));
+
     public bool IsEmpty => Days.Count == 0;
+
+    public SessionLog Last(int count) => new(Days.TakeLast(count).ToList());
+
+    /// <summary>
+    /// The <paramref name="count"/> days before the last <paramref name="count"/>:
+    /// the prior week to this week, the prior fortnight to this fortnight.
+    /// </summary>
+    public SessionLog Before(int count) =>
+        new(Days.SkipLast(count).TakeLast(count).ToList());
 }
 
 /// <summary>A reading through the night. Depth runs 0 at the horizon to 1 at the deepest.</summary>
@@ -79,4 +97,20 @@ public sealed record RunLog(IReadOnlyList<Run> Runs, double GoalKm, double PaceM
     public double Progress => GoalKm <= 0 ? 0 : Math.Clamp(Ran / GoalKm, 0, 1);
 
     public bool IsEmpty => Runs.Count == 0 || GoalKm <= 0;
+}
+
+static class ListExtensions
+{
+    public static int IndexOf<T>(this IReadOnlyList<T> list, T item) where T : struct
+    {
+        for (var i = 0; i < list.Count; i++)
+        {
+            if (list[i].Equals(item))
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
 }

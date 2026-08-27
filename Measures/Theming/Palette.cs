@@ -12,6 +12,10 @@ namespace Measures.Theming;
 /// but leaves every wash hue exactly where it was and only dims the opacities.
 /// One switch, five lights - which is why intensity is tokenised apart from hue.
 ///
+/// The law beside the temperatures: hue distinguishes the instrument, never
+/// the state. No reading may require the hue, and every state has to stay
+/// distinguishable in two non-hue channels - contrast, size, position.
+///
 /// Re-colours the shared brush instances in Application.Current.Resources rather
 /// than re-resolving them, so every consumer follows without a lookup.
 /// </summary>
@@ -86,6 +90,11 @@ public static class Palette
     static readonly double[] LightWash = [0.85, 0.45, 0.18, 0.55];
     static readonly double[] DarkWash = [0.15, 0.08, 0.03, 0.07];
 
+    /// <summary>
+    /// The contrast ramp: hierarchy by opacity, never by colour. Primary
+    /// series at full ink; historical around 40%; references (dashed road
+    /// ahead, AVG rules) at 15%; axis whispers at 45%.
+    /// </summary>
     static readonly (string Key, Token Token, double Alpha)[] Solids =
     [
         ("CanvasBrush", Token.Canvas, 1.00),
@@ -95,13 +104,17 @@ public static class Palette
         ("InkBrush", Token.Ink, 1.00),
         ("QuietBrush", Token.Quiet, 1.00),
 
+        // the numeral's unit sits a step back from the period label beside it
+        ("UnitBrush", Token.Quiet, 0.75),
+
         // the head's metric name leads; everything else up there stays quiet
         ("InkLeadBrush", Token.Ink, 0.62),
 
         ("HairlineBrush", Token.Ink, 0.10),
         ("InkSoft12Brush", Token.Ink, 0.12),
-        ("InkSoft22Brush", Token.Ink, 0.22),
+        ("ReferenceBrush", Token.Ink, 0.15),
         ("InkSoft35Brush", Token.Ink, 0.35),
+        ("InkSoft45Brush", Token.Ink, 0.45),
         ("InkSoft50Brush", Token.Ink, 0.50),
     ];
 
@@ -115,19 +128,28 @@ public static class Palette
         // 0.6, down from the brief's opening 0.9: at full strength the wake
         // stopped reading as light on the road and started reading as "pink",
         // which is the one thing a temperature may never do
-        ("BlushWakeBrush", Token.Blush, 0.6),
+        ("AtmoDistanceBrush", Token.Blush, 0.6),
     ];
 
+    /// <summary>
+    /// The atmospheres, named for what they light rather than for their hue:
+    /// effort, frequency, rest and depth, distance. Defined here and only here
+    /// - a gradient stop with no colour renders black, so no chart may build
+    /// its own wash inline, and <see cref="Verify"/> checks every stop at start.
+    /// </summary>
     static readonly (string Key, (Token Token, Wash Wash)[] Stops)[] Washes =
     [
         // the mist under the ridge: dawn light pooling in the valley
-        ("RidgeMistBrush", [(Token.Butter, Wash.Hi), (Token.Butter, Wash.Lo)]),
+        ("AtmoEffortBrush", [(Token.Butter, Wash.Hi), (Token.Butter, Wash.Lo)]),
+
+        // air after rain, cast under the step line
+        ("AtmoFrequencyBrush", [(Token.Sage, Wash.Hi), (Token.Sage, Wash.Lo)]),
 
         // dusk: lavender across the sky, nothing at either edge of the night
-        ("NightSkyBrush", [(Token.Lavender, Wash.Lo), (Token.Lavender, Wash.Mid), (Token.Lavender, Wash.Mid), (Token.Lavender, Wash.Lo)]),
+        ("AtmoRestBrush", [(Token.Lavender, Wash.Lo), (Token.Lavender, Wash.Mid), (Token.Lavender, Wash.Mid), (Token.Lavender, Wash.Lo)]),
 
         // and mist-blue for the depth of the valley itself
-        ("NightValleyBrush", [(Token.MistBlue, Wash.Mid), (Token.MistBlue, Wash.Lo)]),
+        ("AtmoDepthBrush", [(Token.MistBlue, Wash.Mid), (Token.MistBlue, Wash.Lo)]),
     ];
 
     static readonly (string Key, (Token Token, double Alpha)[] Stops)[] Gradients =
@@ -138,6 +160,7 @@ public static class Palette
 
     static Color[] _scheme = LightScheme;
     static double[] _wash = LightWash;
+    static bool _verified;
 
     public static bool IsDark { get; private set; }
 
@@ -171,12 +194,15 @@ public static class Palette
 
         var res = Application.Current.Resources;
 
+        if (!_verified)
+        {
+            Verify(res);
+            _verified = true;
+        }
+
         foreach (var (key, token, alpha) in Solids)
         {
-            if (res[key] is SolidColorBrush brush)
-            {
-                brush.Color = Get(token, alpha);
-            }
+            ((SolidColorBrush)res[key]).Color = Get(token, alpha);
         }
 
         foreach (var (key, stops) in Gradients)
@@ -186,10 +212,7 @@ public static class Palette
 
         foreach (var (key, token, alpha) in WashSolids)
         {
-            if (res[key] is SolidColorBrush brush)
-            {
-                brush.Color = Get(token, alpha * Dim);
-            }
+            ((SolidColorBrush)res[key]).Color = Get(token, alpha * Dim);
         }
 
         foreach (var (key, stops) in Washes)
@@ -207,22 +230,49 @@ public static class Palette
     /// </summary>
     public static event EventHandler? Recoloured;
 
-    static void Recolour(ResourceDictionary res, string key, IEnumerable<Color> colours)
+    /// <summary>
+    /// The guard from a real incident: a wash whose dictionary entry went
+    /// missing, or whose stop count drifted from this table, painted black.
+    /// Every key this class recolours has to exist with the shape it expects,
+    /// and it is cheaper to find that out at the first Apply than on a device.
+    /// </summary>
+    static void Verify(ResourceDictionary res)
     {
-        if (res[key] is not LinearGradientBrush brush)
+        var faults = new List<string>();
+
+        foreach (var (key, _, _) in Solids.Concat(WashSolids))
         {
-            return;
+            if (!res.TryGetValue(key, out var found) || found is not SolidColorBrush)
+            {
+                faults.Add($"{key} is not a SolidColorBrush in Tokens.xaml");
+            }
         }
 
+        foreach (var (key, stops) in Washes.Select(w => (w.Key, w.Stops.Length)).Concat(Gradients.Select(g => (g.Key, g.Stops.Length))))
+        {
+            if (!res.TryGetValue(key, out var found) || found is not LinearGradientBrush brush)
+            {
+                faults.Add($"{key} is not a LinearGradientBrush in Tokens.xaml");
+            }
+            else if (brush.GradientStops.Count != stops)
+            {
+                faults.Add($"{key} has {brush.GradientStops.Count} stops in Tokens.xaml and {stops} in Palette");
+            }
+        }
+
+        if (faults.Count > 0)
+        {
+            throw new InvalidOperationException("Palette and Tokens.xaml disagree:\n" + string.Join("\n", faults));
+        }
+    }
+
+    static void Recolour(ResourceDictionary res, string key, IEnumerable<Color> colours)
+    {
+        var brush = (LinearGradientBrush)res[key];
         var i = 0;
 
         foreach (var colour in colours)
         {
-            if (i >= brush.GradientStops.Count)
-            {
-                break;
-            }
-
             brush.GradientStops[i++].Color = colour;
         }
     }

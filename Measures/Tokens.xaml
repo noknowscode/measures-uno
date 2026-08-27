@@ -7,7 +7,8 @@
   ThemeDictionary resolve unreliably on Skia. Palette re-colours these very
   brush instances on ActualThemeChanged, so every consumer follows live, and it
   is the authority on the values - the literals here are only the light scheme
-  written down so the designer surface has something to show.
+  written down so the designer surface has something to show. Palette verifies
+  at the first Apply that every key it expects is here with the right shape.
 -->
 <ResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -19,18 +20,21 @@
 
     <x:Double x:Key="LabelSize">9.5</x:Double>
     <x:Double x:Key="AxisSize">8.5</x:Double>
+    <!-- in-chart text: the date line of a point label and every reference label -->
+    <x:Double x:Key="ChartLabelSize">7.5</x:Double>
+    <x:Double x:Key="PointValueSize">10</x:Double>
     <x:Double x:Key="CaptionSize">15</x:Double>
     <!-- 1.35 line box: italic descenders never clip against the one-line ellipsis -->
     <x:Double x:Key="CaptionLineHeight">20.25</x:Double>
-    <x:Double x:Key="NumeralSize">60</x:Double>
-    <x:Double x:Key="NumeralSoftSize">24</x:Double>
+    <!-- value 64, unit 26: the unit is 41% of the value, and the metric dominates the card -->
+    <x:Double x:Key="NumeralSize">64</x:Double>
+    <x:Double x:Key="NumeralSoftSize">26</x:Double>
     <x:Double x:Key="TitleSize">26</x:Double>
 
     <!--
       Two easings, and only two. Gravity eases in, hands ease out. A literal
-      easing in a storyboard is a review failure; the single grandfathered
-      exception is the bead hop, which needs symmetry to go up and come back.
-      Motion authored in code reads these same curves through Anim.
+      easing in a storyboard is a review failure. Motion authored in code reads
+      these same curves through Anim.
     -->
     <KeySpline x:Key="EaseHands" ControlPoint1="0.22,1" ControlPoint2="0.36,1" />
     <KeySpline x:Key="EaseGravity" ControlPoint1="0.4,0" ControlPoint2="1,1" />
@@ -42,14 +46,20 @@
     <SolidColorBrush x:Key="CardLitBrush" Color="#FCFAF8" />
     <SolidColorBrush x:Key="InkBrush" Color="#1F1F1E" />
     <SolidColorBrush x:Key="QuietBrush" Color="#A19A96" />
+    <SolidColorBrush x:Key="UnitBrush" Color="#BFA19A96" />
 
     <!-- the metric name leads the head; the period beside it stays quiet -->
     <SolidColorBrush x:Key="InkLeadBrush" Color="#9E1F1F1E" />
 
+    <!--
+      The contrast ramp. Hierarchy is carried by opacity alone: full ink for
+      the series being read, 45% for axis whispers, 15% for references.
+    -->
     <SolidColorBrush x:Key="HairlineBrush" Color="#1A1F1F1E" />
     <SolidColorBrush x:Key="InkSoft12Brush" Color="#1F1F1F1E" />
-    <SolidColorBrush x:Key="InkSoft22Brush" Color="#381F1F1E" />
+    <SolidColorBrush x:Key="ReferenceBrush" Color="#261F1F1E" />
     <SolidColorBrush x:Key="InkSoft35Brush" Color="#591F1F1E" />
+    <SolidColorBrush x:Key="InkSoft45Brush" Color="#731F1F1E" />
     <SolidColorBrush x:Key="InkSoft50Brush" Color="#801F1F1E" />
 
     <LinearGradientBrush x:Key="PageBrush" StartPoint="0,0" EndPoint="0,1">
@@ -75,33 +85,43 @@
         <GradientStop Offset="1" Color="#F5F0EC" />
     </LinearGradientBrush>
 
-    <!-- ══ light axis: temperatures, never accents ══ -->
+    <!--
+      ══ light axis: atmospheres, never accents ══
+      Named for what they light. Hue tells the instruments apart and never
+      the state: no reading may depend on it.
+    -->
 
-    <!-- dawn on the ridge -->
-    <LinearGradientBrush x:Key="RidgeMistBrush" StartPoint="0,0" EndPoint="0,1">
+    <!-- effort: dawn on the ridge -->
+    <LinearGradientBrush x:Key="AtmoEffortBrush" StartPoint="0,0" EndPoint="0,1">
         <GradientStop Offset="0" Color="#D9F1E8CF" />
         <GradientStop Offset="1" Color="#2EF1E8CF" />
     </LinearGradientBrush>
 
-    <!-- dusk: lavender through the middle of the night, nothing at either edge -->
-    <LinearGradientBrush x:Key="NightSkyBrush" StartPoint="0,0" EndPoint="1,0">
+    <!-- frequency: air after rain, under the step line -->
+    <LinearGradientBrush x:Key="AtmoFrequencyBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Offset="0" Color="#D9DEE4DA" />
+        <GradientStop Offset="1" Color="#2EDEE4DA" />
+    </LinearGradientBrush>
+
+    <!-- rest: lavender through the middle of the night, nothing at either edge -->
+    <LinearGradientBrush x:Key="AtmoRestBrush" StartPoint="0,0" EndPoint="1,0">
         <GradientStop Offset="0" Color="#2EE4E0E8" />
         <GradientStop Offset="0.35" Color="#73E4E0E8" />
         <GradientStop Offset="0.55" Color="#73E4E0E8" />
         <GradientStop Offset="1" Color="#2EE4E0E8" />
     </LinearGradientBrush>
 
-    <!--
-      Late sun left on the road, at 0.6 - the brief's own watch item, taken:
-      at full strength it tipped into reading as "pink" rather than as light.
-      Dark dims it on the same ratio as every other wash.
-    -->
-    <SolidColorBrush x:Key="BlushWakeBrush" Color="#99F1DEDA" />
-
-    <!-- and the depth of the valley itself -->
-    <LinearGradientBrush x:Key="NightValleyBrush" StartPoint="0,0" EndPoint="0,1">
+    <!-- depth: the valley itself -->
+    <LinearGradientBrush x:Key="AtmoDepthBrush" StartPoint="0,0" EndPoint="0,1">
         <GradientStop Offset="0" Color="#73DCE4EA" />
         <GradientStop Offset="1" Color="#2EDCE4EA" />
     </LinearGradientBrush>
+
+    <!--
+      distance: late sun left on the road, at 0.6 - the brief's own watch item,
+      taken: at full strength it tipped into reading as "pink" rather than as
+      light. Dark dims it on the same ratio as every other wash.
+    -->
+    <SolidColorBrush x:Key="AtmoDistanceBrush" Color="#99F1DEDA" />
 
 </ResourceDictionary>

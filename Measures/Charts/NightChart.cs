@@ -19,21 +19,25 @@ namespace Measures.Charts;
 /// other line on the page; the night is told by the light around it, not by
 /// colouring the data.
 ///
+/// The twelve-hour window is remapped onto the shared data span, x 10 to 290,
+/// so the axis whispers under it sit on the same 3.3% inset as every other
+/// card's.
+///
 /// To a screen reader it is a slider, not a picture: minimum, maximum, a live
 /// value, and a value text that says what the value means ("2:10, deep sleep").
 /// </summary>
 public sealed partial class NightChart : ChartBase
 {
-    const double HorizonY = 14;
-    const double PlotBottom = 76;
+    /// <summary>Design units: the horizon and the valley floor inside the 120 box.</summary>
+    const double HorizonY = 21;
+    const double PlotBottom = 114;
     const double Depth = PlotBottom - HorizonY;
-    const double EdgeInset = 4;
 
     /// <summary>Horizontal travel, in pixels, before a drag counts as a scrub.</summary>
     const double IntentThreshold = 8;
 
     /// <summary>Arrow keys move by this fraction of the night per press.</summary>
-    const double KeyStep = 6.0 / 300;
+    const double KeyStep = 6.0 / DataSpan;
 
     public static readonly DependencyProperty ChartDataProperty = DependencyProperty.Register(
         nameof(ChartData), typeof(SleepNight), typeof(NightChart), new PropertyMetadata(null, OnDataChanged));
@@ -64,18 +68,14 @@ public sealed partial class NightChart : ChartBase
     public NightChart()
     {
         DefaultStyleKey = typeof(NightChart);
-        PlotHeight = 80;
 
         // ManipulationMode is deliberately left alone. Making this a manipulation
         // target hands the pointer to the gesture processor, which takes the
         // capture straight back off us and ends the scrub on the first move.
         // Not capturing until horizontal intent is proven is what keeps a
         // vertical swipe with the ScrollViewer, and it needs no manipulation.
-
-        // Setting ManipulationMode makes this element a manipulation target, and
-        // the gesture machinery marks the pointer events handled before they
-        // reach an ordinary subscription. handledEventsToo is the only way to
-        // see them - a plain += here is silently never called.
+        // handledEventsToo, because a child that handles a press would
+        // otherwise hide it from a plain subscription.
         AddHandler(PointerPressedEvent, new PointerEventHandler(OnPointerPressed), true);
         AddHandler(PointerMovedEvent, new PointerEventHandler(OnPointerMoved), true);
         AddHandler(PointerReleasedEvent, new PointerEventHandler(OnPointerReleased), true);
@@ -113,7 +113,7 @@ public sealed partial class NightChart : ChartBase
             return;
         }
 
-        _keyX = Math.Clamp(fraction, 0, 1) * PlotWidth;
+        _keyX = XFor(Math.Clamp(fraction, 0, 1));
         ScrubTo(_keyX.Value);
     }
 
@@ -148,6 +148,12 @@ public sealed partial class NightChart : ChartBase
         }
     }
 
+    /// <summary>A fraction of the window, as a pixel x on the data span.</summary>
+    double XFor(double fraction) => (DataLeft + fraction * DataSpan) * Px;
+
+    /// <summary>A pixel x, as a fraction of the window. Not clamped: the caller decides.</summary>
+    double FractionAt(double x) => (x / Px - DataLeft) / DataSpan;
+
     protected override void Rebuild(double width, double height)
     {
         if (Plot is null)
@@ -168,27 +174,31 @@ public sealed partial class NightChart : ChartBase
             $"Sleep depth through the night. Asleep {Format.Clock(data.Down)}, awake {Format.Clock(data.Up)}. " +
             "Drag across it, or use the arrow keys, to read the time and depth.");
 
+        var s = Px;
+        var horizon = HorizonY * s;
+
         if (_sky is not null)
         {
-            _sky.Width = width;
-            _sky.Height = PlotBottom;
+            Place(_sky, DataLeft * s, 0);
+            _sky.Width = DataSpan * s;
+            _sky.Height = PlotBottom * s;
         }
 
         if (_horizon is not null)
         {
-            _horizon.X1 = 0;
-            _horizon.X2 = width;
-            _horizon.Y1 = _horizon.Y2 = HorizonY;
+            _horizon.X1 = DataLeft * s;
+            _horizon.X2 = DataRight * s;
+            _horizon.Y1 = _horizon.Y2 = horizon;
         }
 
-        _downX = data.Fraction(data.Down) * width;
-        _upX = data.Fraction(data.Up) * width;
+        _downX = XFor(data.Fraction(data.Down));
+        _upX = XFor(data.Fraction(data.Up));
 
-        var nodes = new List<Point> { new(_downX, HorizonY) };
+        var nodes = new List<Point> { new(_downX, horizon) };
         nodes.AddRange(data.Depths.Select(d => new Point(
-            data.Fraction(d.At) * width,
-            HorizonY + Math.Clamp(d.Depth, 0, 1) * Depth)));
-        nodes.Add(new Point(_upX, HorizonY));
+            XFor(data.Fraction(d.At)),
+            horizon + Math.Clamp(d.Depth, 0, 1) * Depth * s)));
+        nodes.Add(new Point(_upX, horizon));
 
         var segments = Curves.FlatTangent(nodes, tension: 0.42, leadIn: 0.35, leadOut: 0.26);
 
@@ -215,18 +225,18 @@ public sealed partial class NightChart : ChartBase
 
         if (_rest is not null)
         {
-            _rest.Data = Curves.ToGeometry(segments, closeToY: true, closeY: HorizonY);
+            _rest.Data = Curves.ToGeometry(segments, closeToY: true, closeY: horizon);
         }
 
         if (_wake is not null)
         {
-            Place(_wake, _upX - _wake.Width / 2, HorizonY - _wake.Height / 2);
+            Centre(_wake, new Point(_upX, horizon));
         }
 
         if (_scrubLine is not null)
         {
-            _scrubLine.Y1 = HorizonY;
-            _scrubLine.Y2 = PlotBottom;
+            _scrubLine.Y1 = horizon;
+            _scrubLine.Y2 = PlotBottom * s;
         }
     }
 
@@ -274,7 +284,6 @@ public sealed partial class NightChart : ChartBase
 
     void OnPointerPressed(object sender, PointerRoutedEventArgs e)
     {
-
         if (_sampler is null)
         {
             return;
@@ -379,10 +388,9 @@ public sealed partial class NightChart : ChartBase
 
         e.Handled = true;
 
-        var width = PlotWidth;
-        var from = _keyX ?? width / 2;
+        var from = _keyX ?? XFor(0.5);
 
-        _keyX = Math.Clamp(from + step * width, EdgeInset, width - EdgeInset);
+        _keyX = Math.Clamp(from + step * DataSpan * Px, DataLeft * Px, DataRight * Px);
         ScrubTo(_keyX.Value);
     }
 
@@ -399,27 +407,26 @@ public sealed partial class NightChart : ChartBase
         {
             return;
         }
-        MarkInvited();
 
-        var width = PlotWidth;
+        MarkInvited();
 
         if (x < _downX || x > _upX)
         {
             // outside the night: the reader is awake, and rides the horizon
-            var clamped = Math.Clamp(x, EdgeInset, width - EdgeInset);
+            var clamped = Math.Clamp(x, DataLeft * Px, DataRight * Px);
+            var fraction = Math.Clamp(FractionAt(clamped), 0, 1);
 
-            ShowScrub(new Point(clamped, HorizonY), showLine: false);
-            Announce(clamped / width, $"{Format.Clock(data.At(clamped / width))} — awake");
+            ShowScrub(new Point(clamped, HorizonY * Px), showLine: false);
+            Announce(fraction, $"{Format.Clock(data.At(fraction))} — awake");
             return;
         }
 
         var point = _sampler.PointAtX(x);
-        var depth = (point.Y - HorizonY) / Depth;
+        var depth = (point.Y - HorizonY * Px) / (Depth * Px);
+        var at = Math.Clamp(FractionAt(point.X), 0, 1);
 
         ShowScrub(point, showLine: true);
-        Announce(
-            point.X / width,
-            $"{Format.Clock(data.At(point.X / width))} — {DepthWord(depth)} sleep");
+        Announce(at, $"{Format.Clock(data.At(at))} — {DepthWord(depth)} sleep");
     }
 
     /// <summary>
@@ -457,7 +464,7 @@ public sealed partial class NightChart : ChartBase
     {
         if (_scrubDot is not null)
         {
-            Place(_scrubDot, at.X - _scrubDot.Width / 2, at.Y - _scrubDot.Height / 2);
+            Centre(_scrubDot, at);
             _scrubDot.Opacity = 1;
         }
 
@@ -470,7 +477,6 @@ public sealed partial class NightChart : ChartBase
 
     void EndScrub()
     {
-
         if (!_scrubbing && _keyX is null)
         {
             return;
@@ -494,9 +500,9 @@ public sealed partial class NightChart : ChartBase
     }
 
     /// <summary>
-    /// The night as a slider. Min and max are the ends of the plot rather than
-    /// the ends of the sleep, because the reader can wander past either edge of
-    /// the night and the chart still has something to say there.
+    /// The night as a slider. Min and max are the ends of the data span rather
+    /// than the ends of the sleep, because the reader can wander past either
+    /// edge of the night and the chart still has something to say there.
     /// </summary>
     sealed class NightAutomationPeer(NightChart owner) : FrameworkElementAutomationPeer(owner), IRangeValueProvider
     {

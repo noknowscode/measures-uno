@@ -1,23 +1,27 @@
 namespace Measures.Data;
 
 /// <summary>
-/// The week the app ships with. Every numeral and caption on the page is
+/// The weeks the app ships with. Every numeral and caption on the page is
 /// derived from these records, so changing a value here moves the whole card.
+/// The ridge and the sessions carry more history than a card shows at once:
+/// the range switchers window onto it, and the prior period is what the
+/// captions compare against.
 /// </summary>
 public static class SampleData
 {
-    public static RidgeData Ridge { get; } = new(
-    [
-        new DayValue("mon", "monday", 2.5),
-        new DayValue("tue", "tuesday", 3.8),
-        new DayValue("wed", "wednesday", 1.2),
-        new DayValue("thu", "thursday", 4.6),
-        new DayValue("fri", "friday", 3.1),
-        new DayValue("sat", "saturday", 5.2),
-        new DayValue("sun", "sunday", 4.2),
-    ]);
+    /// <summary>Two weeks of deep work, ending on the most recent Sunday.</summary>
+    public static RidgeData RidgeHistory { get; } = BuildRidge(
+        [1.9, 3.4, 2.8, 4.1, 2.2, 3.6, 3.9, 2.5, 3.8, 1.2, 4.6, 3.1, 5.2, 4.2]);
 
-    public static SessionLog Sessions { get; } = BuildSessions([3, 5, 2, 0, 4, 6, 3, 1, 4, 5, 2, 6, 3, 4]);
+    /// <summary>The week the ridge opens on.</summary>
+    public static RidgeData Ridge => RidgeHistory.Last(7);
+
+    /// <summary>Four weeks of sessions, ending today.</summary>
+    public static SessionLog SessionsHistory { get; } = BuildSessions(
+        [2, 4, 3, 1, 3, 5, 2, 4, 2, 3, 0, 5, 3, 2, 3, 5, 2, 0, 4, 6, 3, 1, 4, 5, 2, 6, 3, 4]);
+
+    /// <summary>The fortnight the sessions card opens on.</summary>
+    public static SessionLog Sessions => SessionsHistory.Last(14);
 
     public static SleepNight Night { get; } = new(
         Down: new TimeOnly(23, 4),
@@ -40,6 +44,16 @@ public static class SampleData
     ],
         GoalKm: 25,
         PaceMinPerKm: 5.8);
+
+    static RidgeData BuildRidge(double[] hours)
+    {
+        // anchored to a Sunday so the week reads mon..sun whatever today is
+        var today = DateOnly.FromDateTime(DateTime.Now);
+        var sunday = today.AddDays(-(int)today.DayOfWeek);
+
+        return new RidgeData(
+            [.. hours.Select((h, i) => new DayValue(sunday.AddDays(i - hours.Length + 1), h))]);
+    }
 
     static SessionLog BuildSessions(int[] counts)
     {
