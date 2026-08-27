@@ -126,7 +126,7 @@
                 <FlipView
                     x:Name="Carousel"
                     Grid.Row="2"
-                    VerticalAlignment="Top"
+                    VerticalAlignment="Center"
                     Background="Transparent"
                     IsTabStop="False"
                     SelectionChanged="OnCarouselChanged">

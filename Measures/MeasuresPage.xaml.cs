@@ -109,6 +109,11 @@ public sealed partial class MeasuresPage : Page
         // the finger on press - there is no vertical scroll left to protect
         Night.ScrubOnPress = !onBench;
 
+        // one card fits the screen, so the page stops scrolling: that is what
+        // lets the star row take the remaining height and centre the card in it
+        Scroll.VerticalScrollMode = onBench ? ScrollMode.Enabled : ScrollMode.Disabled;
+        Scroll.VerticalScrollBarVisibility = onBench ? ScrollBarVisibility.Auto : ScrollBarVisibility.Disabled;
+
         if (onBench)
         {
             foreach (var card in Cards)
