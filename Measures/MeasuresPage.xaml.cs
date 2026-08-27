@@ -37,6 +37,7 @@ public sealed partial class MeasuresPage : Page
         Loaded += (_, _) =>
         {
             PadForChrome();
+            ThemeLabel.Text = ActualTheme == ElementTheme.Dark ? "Light" : "Dark";
 
             // on activation focus lands on the first focusable control, which
             // scrolls the page down and paints a focus ring nobody asked for.
@@ -67,6 +68,24 @@ public sealed partial class MeasuresPage : Page
         {
             // desktop has no system inset to speak of, and nothing to apologise for
         }
+    }
+
+    /// <summary>
+    /// Flips the scheme on the window's root frame, which is what Palette
+    /// listens to - the page's own Parent is a presenter inside it on some
+    /// targets. The label names the scheme a tap will bring, not the one showing.
+    /// </summary>
+    void OnToggleTheme(object sender, RoutedEventArgs e)
+    {
+        if (Microsoft.UI.Xaml.Window.Current?.Content is not FrameworkElement host)
+        {
+            return;
+        }
+
+        var toDark = host.ActualTheme != ElementTheme.Dark;
+
+        host.RequestedTheme = toDark ? ElementTheme.Dark : ElementTheme.Light;
+        ThemeLabel.Text = toDark ? "Light" : "Dark";
     }
 
     /// <summary>

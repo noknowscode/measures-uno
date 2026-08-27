@@ -69,15 +69,36 @@ public partial class App : Application
         Palette.Apply(rootFrame.ActualTheme);
         rootFrame.ActualThemeChanged += (sender, _) => Palette.Apply(sender.ActualTheme);
 
-        // The field is meant to run to the edge of the glass, but every colour
-        // on AppWindowTitleBar is Uno0001 not-implemented on the targets this
-        // app builds, so the chrome stays system-drawn for now. Carried, not
-        // forgotten: see DELTA-behavior, "Browser/system chrome joins the field".
+        Palette.Recoloured += (_, _) => DressTheChrome();
+        DressTheChrome();
+
+        Console.WriteLine($"Measures: animations enabled = {Measures.Motion.Anim.Enabled}");
 
 
         MainWindow.SetWindowIcon();
         // Ensure the current window is active
         MainWindow.Activate();
+    }
+
+    /// <summary>
+    /// The system chrome joins the field. On Android the status bar is glass
+    /// over the plaster and its icons take the ink of the current scheme; on
+    /// desktop every AppWindowTitleBar colour is Uno0001 not-implemented, so
+    /// the chrome stays system-drawn there. Carried, not forgotten.
+    /// </summary>
+    static void DressTheChrome()
+    {
+#if __ANDROID__
+        try
+        {
+            var bar = Windows.UI.ViewManagement.StatusBar.GetForCurrentView();
+            bar.ForegroundColor = Palette.Get(Palette.Token.Ink);
+        }
+        catch (Exception)
+        {
+            // an older API level without a status bar view: nothing to dress
+        }
+#endif
     }
 
     /// <summary>

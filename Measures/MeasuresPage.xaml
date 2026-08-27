@@ -81,6 +81,14 @@
                             VerticalAlignment="Bottom"
                             Style="{StaticResource LabelStyle}"
                             Text="Without thought" />
+                        <!-- the scheme, in the reader's hand rather than only the system's -->
+                        <Button
+                            x:Name="ThemeButton"
+                            AutomationProperties.Name="Switch between light and dark"
+                            Click="OnToggleTheme"
+                            Style="{StaticResource QuietButtonStyle}">
+                            <controls:SpacedText x:Name="ThemeLabel" Style="{StaticResource LabelStyle}" Text="Dark" />
+                        </Button>
                         <!-- replays every entrance, for showing the page cold -->
                         <Button
                             x:Name="ReplayButton"

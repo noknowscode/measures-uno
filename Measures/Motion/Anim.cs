@@ -225,6 +225,16 @@ public static class Anim
     /// </summary>
     static readonly List<Storyboard> Live = [];
 
+    /// <summary>
+    /// The board currently holding each (target, property). A finished HoldEnd
+    /// board keeps overriding the local value, so a replay that sets Opacity
+    /// to 0 and then animates it up after a delay would show the held 1 for
+    /// the whole delay - the fills and marks never left. The previous board
+    /// on the same property is stopped first, which hands the property back
+    /// to the local value the caller just set.
+    /// </summary>
+    static readonly System.Runtime.CompilerServices.ConditionalWeakTable<DependencyObject, Dictionary<string, Storyboard>> Holding = new();
+
     static Storyboard Run(DependencyObject target, string property, Timeline animation, Action? completed)
     {
         Storyboard.SetTarget(animation, target);
@@ -242,6 +252,16 @@ public static class Anim
         // a stopped board never raises Completed, so sweep on the way in
         Live.RemoveAll(b => b.GetCurrentState() == ClockState.Stopped);
         Live.Add(board);
+
+        var held = Holding.GetOrCreateValue(target);
+
+        if (held.TryGetValue(property, out var previous))
+        {
+            previous.Stop();
+            Live.Remove(previous);
+        }
+
+        held[property] = board;
 
         board.Begin();
         return board;

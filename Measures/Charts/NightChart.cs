@@ -33,8 +33,12 @@ public sealed partial class NightChart : ChartBase
     const double PlotBottom = 114;
     const double Depth = PlotBottom - HorizonY;
 
-    /// <summary>Horizontal travel, in pixels, before a drag counts as a scrub.</summary>
-    const double IntentThreshold = 8;
+    /// <summary>
+    /// Horizontal travel, in pixels, before a drag counts as a scrub. Small:
+    /// the scroll viewer is racing for the same finger, and it claims it at
+    /// the platform's own slop, so intent has to be read before that.
+    /// </summary>
+    const double IntentThreshold = 4;
 
     /// <summary>Arrow keys move by this fraction of the night per press.</summary>
     const double KeyStep = 6.0 / DataSpan;
@@ -397,6 +401,21 @@ public sealed partial class NightChart : ChartBase
     void BeginScrub(PointerRoutedEventArgs e)
     {
         _scrubbing = CapturePointer(e.Pointer);
+
+        // the finger has proven it means to go sideways, so the page must let
+        // go of it: a scroll that had already begun would otherwise keep
+        // taking the capture back, which reads as a scrub that stutters
+        if (_scrubbing && e.Pointer.PointerDeviceType == Microsoft.UI.Input.PointerDeviceType.Touch)
+        {
+            for (DependencyObject? node = this; node is not null; node = VisualTreeHelper.GetParent(node))
+            {
+                if (node is ScrollViewer scroll)
+                {
+                    scroll.CancelDirectManipulations();
+                    break;
+                }
+            }
+        }
     }
 
     void ScrubTo(double x)
