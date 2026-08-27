@@ -1,5 +1,9 @@
 using System.Globalization;
+using Measures.Controls;
 using Measures.Data;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Shapes;
 
 namespace Measures;
 
@@ -11,8 +15,14 @@ namespace Measures;
 /// </summary>
 public sealed partial class MeasuresPage : Page
 {
+    /// <summary>The bench's breakpoint, the same number the AdaptiveTrigger uses.</summary>
+    const double WideWidth = 620;
+
+    readonly List<Ellipse> _pips = [];
+
     int _ridgeDays = 7;
     int _sessionDays = 14;
+    bool? _onBench;
 
     public MeasuresPage()
     {
@@ -34,9 +44,12 @@ public sealed partial class MeasuresPage : Page
             SessionsCard.Replay();
         };
 
+        Root.SizeChanged += (_, e) => Seat(e.NewSize.Width >= WideWidth);
+
         Loaded += (_, _) =>
         {
             PadForChrome();
+            Seat(Root.ActualWidth >= WideWidth);
             ThemeLabel.Text = ActualTheme == ElementTheme.Dark ? "Light" : "Dark";
 
             // on activation focus lands on the first focusable control, which
@@ -70,6 +83,77 @@ public sealed partial class MeasuresPage : Page
         }
     }
 
+    MeasureCard[] Cards => [RidgeCard, SessionsCard, NightCard, RoadCard];
+
+    /// <summary>
+    /// Seats the four cards on the bench or in the carousel. One set of cards,
+    /// two rooms: re-parenting keeps every pin, range and entrance state the
+    /// reader has built up, where a second set of cards would lose it.
+    /// </summary>
+    void Seat(bool onBench)
+    {
+        if (_onBench == onBench)
+        {
+            return;
+        }
+
+        _onBench = onBench;
+
+        foreach (var card in Cards)
+        {
+            Bench.Children.Remove(card);
+            Carousel.Items.Remove(card);
+        }
+
+        // in the carousel the whole card swipes, so the night plot must claim
+        // the finger on press - there is no vertical scroll left to protect
+        Night.ScrubOnPress = !onBench;
+
+        if (onBench)
+        {
+            foreach (var card in Cards)
+            {
+                Bench.Children.Add(card);
+            }
+
+            return;
+        }
+
+        foreach (var card in Cards)
+        {
+            Carousel.Items.Add(card);
+        }
+
+        BuildPips();
+    }
+
+    void BuildPips()
+    {
+        Pips.Children.Clear();
+        _pips.Clear();
+
+        for (var i = 0; i < Cards.Length; i++)
+        {
+            var pip = new Ellipse { Width = 5, Height = 5 };
+            Pips.Children.Add(pip);
+            _pips.Add(pip);
+        }
+
+        PaintPips();
+    }
+
+    void PaintPips()
+    {
+        var res = Application.Current.Resources;
+
+        for (var i = 0; i < _pips.Count; i++)
+        {
+            _pips[i].Fill = (Brush)res[i == Carousel.SelectedIndex ? "InkBrush" : "InkSoft35Brush"];
+        }
+    }
+
+    void OnCarouselChanged(object sender, SelectionChangedEventArgs e) => PaintPips();
+
     /// <summary>
     /// Flips the scheme on the window's root frame, which is what Palette
     /// listens to - the page's own Parent is a presenter inside it on some
@@ -95,7 +179,7 @@ public sealed partial class MeasuresPage : Page
     /// </summary>
     void OnReplay(object sender, RoutedEventArgs e)
     {
-        foreach (var card in new[] { RidgeCard, SessionsCard, NightCard, RoadCard })
+        foreach (var card in Cards)
         {
             card.Replay();
         }

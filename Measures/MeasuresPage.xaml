@@ -19,6 +19,9 @@
                 </VisualState.StateTriggers>
                 <VisualState.Setters>
                     <Setter Target="Pad.Padding" Value="56" />
+                    <Setter Target="Bench.Visibility" Value="Visible" />
+                    <Setter Target="Carousel.Visibility" Value="Collapsed" />
+                    <Setter Target="Pips.Visibility" Value="Collapsed" />
 
                     <Setter Target="RidgeCard.(Grid.Row)" Value="0" />
                     <Setter Target="RidgeCard.(Grid.Column)" Value="0" />
@@ -55,6 +58,7 @@
                 MaxWidth="856"
                 HorizontalAlignment="Stretch">
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
@@ -100,12 +104,49 @@
                     </StackPanel>
                 </Grid>
 
+                <!--
+                  ══ the pips ══
+                  Narrow only: which room the reader is in. Contrast, not hue -
+                  the current one is charcoal, the rest are 35% ink.
+                -->
+                <StackPanel
+                    x:Name="Pips"
+                    Grid.Row="1"
+                    Margin="0,-12,0,20"
+                    HorizontalAlignment="Center"
+                    Orientation="Horizontal"
+                    Spacing="8" />
+
+                <!--
+                  ══ the carousel ══
+                  Narrow only: one instrument at a time, swiped. The cards are
+                  moved in here from the bench by the page when the width
+                  crosses the breakpoint, so both layouts share one set.
+                -->
+                <FlipView
+                    x:Name="Carousel"
+                    Grid.Row="2"
+                    VerticalAlignment="Top"
+                    Background="Transparent"
+                    IsTabStop="False"
+                    SelectionChanged="OnCarouselChanged">
+                    <FlipView.ItemContainerStyle>
+                        <Style TargetType="FlipViewItem">
+                            <Setter Property="Background" Value="Transparent" />
+                            <Setter Property="Padding" Value="0" />
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <Setter Property="VerticalContentAlignment" Value="Top" />
+                        </Style>
+                    </FlipView.ItemContainerStyle>
+                </FlipView>
+
                 <!-- ══ the bench ══ -->
                 <Grid
                     x:Name="Bench"
-                    Grid.Row="1"
+                    Grid.Row="2"
                     ColumnSpacing="16"
-                    RowSpacing="16">
+                    RowSpacing="16"
+                    Visibility="Collapsed">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="*" />

@@ -95,6 +95,13 @@ public sealed partial class NightChart : ChartBase
         Unloaded += (_, _) => _breath?.Dispose();
     }
 
+    /// <summary>
+    /// When the plot sits in a horizontal carousel there is no vertical scroll
+    /// to protect, and waiting for sideways intent would only hand the first
+    /// few pixels to the swipe. A touch then scrubs from the press.
+    /// </summary>
+    public bool ScrubOnPress { get; set; }
+
     public SleepNight? ChartData
     {
         get => (SleepNight?)GetValue(ChartDataProperty);
@@ -298,7 +305,7 @@ public sealed partial class NightChart : ChartBase
 
         // a pointer that cannot wander vertically can start scrubbing at once;
         // a finger has to prove it means to go sideways first
-        if (e.Pointer.PointerDeviceType == Microsoft.UI.Input.PointerDeviceType.Touch)
+        if (!ScrubOnPress && e.Pointer.PointerDeviceType == Microsoft.UI.Input.PointerDeviceType.Touch)
         {
             _awaitingIntent = true;
             return;
