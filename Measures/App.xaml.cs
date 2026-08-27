@@ -72,8 +72,6 @@ public partial class App : Application
         Palette.Recoloured += (_, _) => DressTheChrome();
         DressTheChrome();
 
-        Console.WriteLine($"Measures: animations enabled = {Measures.Motion.Anim.Enabled}");
-
 
         MainWindow.SetWindowIcon();
         // Ensure the current window is active

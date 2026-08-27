@@ -8,9 +8,9 @@ using Microsoft.UI.Xaml.Media;
 namespace Measures.Controls;
 
 /// <summary>
-/// The one line each card speaks with. It owns the 140 ms fade-swap, the
-/// stale-write token that keeps a slow swap from overwriting a fast one, and
-/// the invitation: the caption teaches its gesture once, then summarises.
+/// The one line each card speaks with. It owns the 140 ms fade-swap and the
+/// stale-write token that keeps a slow swap from overwriting a fast one. The
+/// charts own the invitation; this only speaks what they say.
 ///
 /// A live reading signals by weight of colour - quiet taupe up to full charcoal
 /// - never by hue. Readings never resize the card, so the text never wraps,
@@ -35,9 +35,6 @@ public sealed partial class CaptionPresenter : Control
         Unloaded += (_, _) => Palette.Recoloured -= OnRecoloured;
     }
 
-    /// <summary>True once the reader has performed this card's gesture.</summary>
-    public bool Invited { get; private set; }
-
     public string CurrentText { get; private set; } = string.Empty;
 
     protected override void OnApplyTemplate()
@@ -57,9 +54,6 @@ public sealed partial class CaptionPresenter : Control
     }
 
     protected override AutomationPeer OnCreateAutomationPeer() => new CaptionAutomationPeer(this);
-
-    /// <summary>Marks the gesture as learned; the default line changes from here on.</summary>
-    public void Invite() => Invited = true;
 
     /// <summary>A committed reading: dips, swaps, comes back.</summary>
     public void SetReading(string text, bool live) => Swap(text, live, immediate: false);

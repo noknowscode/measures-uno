@@ -98,9 +98,7 @@ public static class Palette
     static readonly (string Key, Token Token, double Alpha)[] Solids =
     [
         ("CanvasBrush", Token.Canvas, 1.00),
-        ("Canvas2Brush", Token.Canvas2, 1.00),
         ("CardBrush", Token.Card, 1.00),
-        ("CardLitBrush", Token.CardLit, 1.00),
         ("InkBrush", Token.Ink, 1.00),
         ("QuietBrush", Token.Quiet, 1.00),
 

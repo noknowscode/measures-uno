@@ -1,5 +1,5 @@
 # HANDOFF — Measures Uno port
-Updated: 2026-08-26
+Updated: 2026-08-27
 
 ## Where we are
 
@@ -31,6 +31,19 @@ What the delta pass changed:
   `Temperature` enum is semantic (Effort/Frequency/Rest/Distance), and `Palette.Verify` throws
   at the first `Apply` if any expected key or gradient stop count is missing from `Tokens.xaml`.
 
+Since then (2026-08-27, on the Pixel 8 and desktop):
+
+- **Android** builds and runs on the Pixel 8 (`com.measures.app`). Status bar is transparent
+  with scheme-coloured icons; the page pads its own inset from `VisibleBounds`.
+- **Carousel below 620**: the four cards are re-seated from the 2x2 bench into a `FlipView`
+  with pips (`MeasuresPage.Seat`). In the carousel `NightChart.ScrubOnPress` claims the finger
+  on press, so the swipe lives on the rest of the card.
+- **Dark/Light button** in the header flips the window's root Frame (what `Palette` listens to).
+- **Replay** now really replays: `Anim.Run` stops the previous HoldEnd board on the same
+  target/property, or the held value masks the local `Opacity = 0` through the delay.
+- **Audit pass**: dead members and two unused brushes removed, scaffold `GlobalUsings` trimmed,
+  no hex outside `Tokens.xaml`, no narration comments, 0 warnings on both heads.
+
 Platform gaps carried from earlier sessions still apply (StrokeDashArray does not render,
 CharacterSpacing is a no-op, decoration must be `IsHitTestVisible="False"`).
 
@@ -47,12 +60,14 @@ CharacterSpacing is a no-op, decoration must be `IsHitTestVisible="False"`).
 
 ## Next actions
 
-1. Android device pass: night scrub vs vertical scroll (highest risk, unchanged), and the
-   `DaySlot` hit zones at the 14-day width (~24 epx).
-2. Hover pass with a real pointer: ridge hollow-mark materialisation, sessions `PART_Hover`,
-   point-label fades.
-3. Decide SMAX overflow for sessions (fixed 6; live data above clips) and the ridge Ceiling.
-4. The time scrubber (`DELTA-time-scrubber`) is explicitly experimental and not built.
+1. Uno.Sdk 6.6.42 -> 6.7.18 is the latest stable (checked 2026-08-27). Bump in `global.json`,
+   rebuild both heads, re-verify the Runtime Gotchas that were pinned on 6.6.42.
+2. Device pass on the carousel: does a real swipe ever skip a card (a 200 ms synthetic flick
+   jumped two)? Does the night scrub feel right now that it starts on press?
+3. Hover pass with a real pointer on desktop: ridge hollow-mark materialisation, sessions
+   `PART_Hover`, point-label fades.
+4. Decide SMAX overflow for sessions (fixed 6; live data above clips) and the ridge Ceiling.
+5. The time scrubber (`DELTA-time-scrubber`) is explicitly experimental and not built.
    `docs/glyph-field-background.md` is an unrelated spec.
 
 ## Open questions

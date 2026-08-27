@@ -50,8 +50,6 @@ public static class Anim
         }
     }
 
-    public static Func<double, double> Linear => u => u;
-
     static KeySpline Spline(double x1, double y1, double x2, double y2) =>
         new() { ControlPoint1 = new Point(x1, y1), ControlPoint2 = new Point(x2, y2) };
 

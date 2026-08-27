@@ -40,10 +40,9 @@
     <KeySpline x:Key="EaseGravity" ControlPoint1="0.4,0" ControlPoint2="1,1" />
 
     <!-- ══ neutral axis ══ -->
+    <!-- Canvas2 and CardLit exist only as gradient stops, so they have no solid brush -->
     <SolidColorBrush x:Key="CanvasBrush" Color="#F5F0EC" />
-    <SolidColorBrush x:Key="Canvas2Brush" Color="#E8E5E4" />
     <SolidColorBrush x:Key="CardBrush" Color="#FBF8F5" />
-    <SolidColorBrush x:Key="CardLitBrush" Color="#FCFAF8" />
     <SolidColorBrush x:Key="InkBrush" Color="#1F1F1E" />
     <SolidColorBrush x:Key="QuietBrush" Color="#A19A96" />
     <SolidColorBrush x:Key="UnitBrush" Color="#BFA19A96" />
