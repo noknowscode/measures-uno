@@ -1,3 +1,5 @@
+> **Moved to uno-lab.** This project now lives in the `measures-uno/` folder of [noknowscode/uno-lab](https://github.com/noknowscode/uno-lab/tree/main/measures-uno) (private). This repository is archived and kept for its history.
+
 # Measures
 
 An Uno Platform port of an HTML prototype (`prototype/ethereal-measures.html`): one page of four personal-data cards, each with its own hand-drawn chart and one gesture. The data is static sample data in `Measures/Data/SampleData.cs`.
